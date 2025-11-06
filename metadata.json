@@ -1,0 +1,8 @@
+{
+  "name": "Jonmurr.fit",
+  "description": "An AI-powered fitness and nutrition coach that combines instant photo-based food logging, smart macro targets, and adaptive training with strength reports.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
