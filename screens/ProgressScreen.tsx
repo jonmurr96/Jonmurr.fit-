@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { WeightLog, DailyLog, MacroDayTarget, UserProfile, PhotoBundle, PhotoAngle, PhotoEntry, WaterLog, Milestone, MilestoneType } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, ReferenceLine } from 'recharts';
-import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, CameraIcon, ArrowsRightLeftIcon, ListIcon, ChartLineIcon, TrophyIcon, FireIcon, PlusIcon } from '../components/Icons';
+import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, CameraIcon, ArrowsRightLeftIcon, ListIcon, ChartLineIcon, TrophyIcon, FireIcon, PlusIcon, SettingsIcon } from '../components/Icons';
+import { DataBackup } from '../components/DataBackup';
 
 type WeightUnit = 'kg' | 'lbs';
 type WaterUnit = 'oz' | 'ml';
@@ -813,6 +814,7 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   const [isLoggingWeight, setIsLoggingWeight] = useState(false);
   const [isEditingWaterGoal, setIsEditingWaterGoal] = useState(false);
   const [isAddingCustomWater, setIsAddingCustomWater] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'summary' | 'weight' | 'photos' | 'water' | 'milestones'>('summary');
   
   const handleSaveWeight = useCallback((newWeightKg: number, newGoalKg: number) => {
@@ -848,8 +850,17 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
 
   return (
     <div className="p-4 space-y-6 text-white pb-24">
-      <h1 className="text-3xl font-bold">Progress</h1>
-      
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Progress</h1>
+        <button
+          onClick={() => setShowBackupModal(true)}
+          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors"
+          title="Data Backup"
+        >
+          <SettingsIcon className="w-6 h-6 text-zinc-300" />
+        </button>
+      </div>
+
       <ProgressTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       
       {activeTab === 'summary' && (
@@ -885,6 +896,7 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
       {isEditingWaterGoal && <EditWaterGoalModal currentGoal={waterGoal} onSave={(g) => { setWaterGoal(g); setIsEditingWaterGoal(false); }} onClose={() => setIsEditingWaterGoal(false)} unit={waterUnit} />}
       {isAddingCustomWater && <AddCustomWaterModal onSave={(amount) => handleAddWater(amount)} onClose={() => setIsAddingCustomWater(false)} unit={waterUnit} />}
       {celebrationMilestone && <CelebrationModal milestone={celebrationMilestone} onClose={() => setCelebrationMilestone(null)} />}
+      {showBackupModal && <DataBackup onClose={() => setShowBackupModal(false)} />}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Screen } from '../types';
-import { HomeIcon, DumbbellIcon, UtensilsIcon, ChartLineIcon, BotIcon } from './Icons';
+import { HomeIcon, DumbbellIcon, UtensilsIcon, ChartLineIcon, TrophyIcon } from './Icons';
 
 interface BottomNavProps {
   activeScreen: Screen;
@@ -12,8 +12,8 @@ const navItems = [
   { screen: 'home' as Screen, label: 'Home', icon: HomeIcon },
   { screen: 'train' as Screen, label: 'Train', icon: DumbbellIcon },
   { screen: 'log' as Screen, label: 'Log', icon: UtensilsIcon },
+  { screen: 'analytics' as Screen, label: 'Stats', icon: TrophyIcon },
   { screen: 'progress' as Screen, label: 'Progress', icon: ChartLineIcon },
-  { screen: 'coach' as Screen, label: 'Coach', icon: BotIcon },
 ];
 
 const NavItem: React.FC<{
