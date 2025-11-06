@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { WeightLog, DailyLog, MacroDayTarget, UserProfile, PhotoBundle, PhotoAngle, PhotoEntry, WaterLog, Milestone, MilestoneType } from '../types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, ReferenceLine } from 'recharts';
 import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, CameraIcon, ArrowsRightLeftIcon, ListIcon, ChartLineIcon, TrophyIcon, FireIcon, PlusIcon } from '../components/Icons';
 
 type WeightUnit = 'kg' | 'lbs';
@@ -281,7 +281,7 @@ const WaterTrendChartCard: React.FC<{ logs: WaterLog[], goal: number, unit: Wate
                     <ReferenceLine y={goalInUnit} label={{ value: `Goal`, position: 'insideTopLeft', fill: '#f97316' }} stroke="#f97316" strokeDasharray="3 3" />
                     <Bar dataKey="intake" name={`Intake (${unit})`}>
                         {last7DaysData.map((entry, index) => (
-                            <Bar key={`cell-${index}`} fill={entry.intake >= goalInUnit ? "#34d399" : "#38bdf8"} />
+                            <Cell key={`cell-${index}`} fill={entry.intake >= goalInUnit ? "#34d399" : "#38bdf8"} />
                         ))}
                     </Bar>
                 </BarChart>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Meal, FoodItem, GeneratedMealPlan, MacroTargets, NutritionPlanPreferences, UserProfile } from '../types';
 import { CameraIcon, MicrophoneIcon, TrashIcon, PlusIcon } from '../components/Icons';
 import { logFoodWithNLP, logFoodWithPhoto } from '../services/geminiService';
@@ -188,13 +188,13 @@ const AddQuickAddModal: React.FC<{ onClose: () => void; onSave: (item: NewQuickA
 };
 
 const GenerationLoadingModal: React.FC = () => {
-    const messages = [
+    const messages = useMemo(() => [
         "Analyzing your nutrition goals...",
         "Calculating your calorie needs...",
         "Selecting the perfect foods...",
         "Building your personalized meal plan...",
         "Finalizing the details..."
-    ];
+    ], []);
     const [currentMessage, setCurrentMessage] = useState(messages[0]);
 
     useEffect(() => {
@@ -207,7 +207,7 @@ const GenerationLoadingModal: React.FC = () => {
         }, 2500);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [messages]);
 
     return (
         <div className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center p-4 z-[60] animate-fade-in">
