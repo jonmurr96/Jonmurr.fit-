@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { BottomNav } from './components/BottomNav';
 import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences } from './types';
 import { generateWorkoutPlan, generateMealPlan } from './services/geminiService';
+import { useAuth } from './components/AuthProvider';
+import { AuthScreen } from './components/AuthScreen';
 
 // Lazy load screen components for better performance
 const HomeScreen = React.lazy(() => import('./screens/HomeScreen').then(module => ({ default: module.HomeScreen })));
@@ -82,6 +84,24 @@ const ScreenLoader: React.FC = () => (
 );
 
 const App: React.FC = () => {
+    const { user, loading: authLoading } = useAuth();
+
+    // Show loading screen while checking authentication
+    if (authLoading) {
+        return <ScreenLoader />;
+    }
+
+    // Show auth screen if user is not logged in
+    if (!user) {
+        return <AuthScreen />;
+    }
+
+    return <AuthenticatedApp />;
+};
+
+const AuthenticatedApp: React.FC = () => {
+    const { user: authUser } = useAuth();
+
     const useStickyState = <T,>(defaultValue: T, key: string): [T, React.Dispatch<React.SetStateAction<T>>] => {
         const [value, setValue] = useState<T>(() => {
             try {
@@ -98,7 +118,13 @@ const App: React.FC = () => {
     };
 
     const [activeScreen, setActiveScreen] = useState<Screen>('home');
-    const [user] = useState<UserProfile>(MOCK_USER);
+
+    // Use authenticated user's name and email
+    const [user] = useState<UserProfile>({
+        name: authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || 'User',
+        avatarUrl: authUser?.user_metadata?.avatar_url || 'https://picsum.photos/id/237/100/100',
+        heightCm: 180,
+    });
     
     const [meals, setMeals] = useStickyState<Meal[]>([], 'jonmurrfit-meals');
     const [macroTargets, setMacroTargets] = useStickyState<MacroTargets>(INITIAL_MOCK_TARGETS, 'jonmurrfit-macroTargets');
