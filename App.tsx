@@ -4,6 +4,7 @@ import { BottomNav } from './components/BottomNav';
 import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences, GamificationState, EarnedBadge, LevelInfo } from './types';
 import { generateWorkoutPlan, generateMealPlan } from './services/geminiService';
 import { calculateLevelInfo, ALL_BADGES, getInitialChallenges } from './utils/gamification';
+import { userService, mealService, workoutService, progressService, gamificationService, mealPlanService } from './services/database';
 
 
 // Lazy load screen components for better performance
@@ -101,7 +102,8 @@ const App: React.FC = () => {
     };
 
     const [activeScreen, setActiveScreen] = useState<Screen>('home');
-    const [user] = useState<UserProfile>(MOCK_USER);
+    const [user, setUser] = useState<UserProfile>(MOCK_USER);
+    const [isInitializing, setIsInitializing] = useState(true);
     
     const [meals, setMeals] = useStickyState<Meal[]>([], 'jonmurrfit-meals');
     const [macroTargets, setMacroTargets] = useStickyState<MacroTargets>(INITIAL_MOCK_TARGETS, 'jonmurrfit-macroTargets');
@@ -155,6 +157,66 @@ const App: React.FC = () => {
     const levelInfo = calculateLevelInfo(gamificationData.xp);
 
     useEffect(() => {
+        const initializeFromDatabase = async () => {
+            try {
+                const todayDate = new Date().toISOString().split('T')[0];
+                
+                const profile = await userService.getProfile();
+                if (profile) {
+                    setUser(profile);
+                } else {
+                    await userService.updateProfile(MOCK_USER);
+                }
+
+                const targets = await userService.getMacroTargets();
+                if (targets) {
+                    setMacroTargets(targets);
+                } else {
+                    await userService.updateMacroTargets(INITIAL_MOCK_TARGETS);
+                }
+
+                const todaysMeals = await mealService.getMealsForDate(todayDate);
+                setMeals(todaysMeals);
+
+                const program = await workoutService.getActiveProgram();
+                setTrainingProgram(program);
+
+                const weights = await progressService.getWeightLogs();
+                setWeightLogs(weights);
+
+                const waterLog = await progressService.getWaterLog(todayDate);
+                setWaterLogs([waterLog]);
+
+                const gamificationState = await gamificationService.getGamificationState();
+                if (gamificationState.xp > 0 || gamificationState.earnedBadges.length > 0) {
+                    setGamificationData(gamificationState);
+                }
+
+                const quickMeals = await mealService.getQuickAddMeals();
+                if (quickMeals.length > 0) {
+                    setQuickAddMeals(quickMeals);
+                } else {
+                    for (const meal of INITIAL_QUICK_ADD_MEALS) {
+                        await mealService.addQuickAddMeal(meal.name, meal.items);
+                    }
+                }
+
+                const activePlan = await mealPlanService.getActiveMealPlan();
+                if (activePlan) {
+                    setActiveMealPlan(activePlan);
+                }
+
+                setIsInitializing(false);
+            } catch (error) {
+                console.error('Error initializing from database:', error);
+                setIsInitializing(false);
+            }
+        };
+
+        initializeFromDatabase();
+    }, []);
+
+    useEffect(() => {
         const lastVisitDate = localStorage.getItem('jonmurrfit-lastVisit');
         const todayDate = new Date().toISOString().split('T')[0];
         if (lastVisitDate !== todayDate) {
@@ -163,19 +225,32 @@ const App: React.FC = () => {
         }
     }, []);
 
-    const awardXp = useCallback((amount: number) => {
-        setGamificationData(prev => ({ ...prev, xp: prev.xp + amount }));
+    const awardXp = useCallback(async (amount: number) => {
+        try {
+            await gamificationService.addXP(amount);
+            setGamificationData(prev => ({ ...prev, xp: prev.xp + amount }));
+        } catch (error) {
+            console.error('Error adding XP:', error);
+        }
     }, [setGamificationData]);
 
-    const unlockBadge = useCallback((badgeId: string) => {
-        setGamificationData(prev => {
-            if (prev.earnedBadges.some(b => b.id === badgeId)) return prev;
-            const badgeToUnlock = ALL_BADGES.find(b => b.id === badgeId);
-            if (badgeToUnlock) {
-                const newBadge: EarnedBadge = {
-                    ...badgeToUnlock,
-                    earnedOn: new Date().toISOString().split('T')[0],
-                };
+    const unlockBadge = useCallback(async (badgeId: string) => {
+        const alreadyEarned = gamificationData.earnedBadges.some(b => b.id === badgeId);
+        if (alreadyEarned) return;
+        
+        const badgeToUnlock = ALL_BADGES.find(b => b.id === badgeId);
+        if (badgeToUnlock) {
+            const newBadge: EarnedBadge = {
+                ...badgeToUnlock,
+                earnedOn: new Date().toISOString().split('T')[0],
+            };
+            
+            try {
+                await gamificationService.earnBadge(newBadge);
+                setGamificationData(prev => ({
+                    ...prev,
+                    earnedBadges: [...prev.earnedBadges, newBadge]
+                }));
                 setCelebrationMilestone({
                     id: `badge-${badgeId}`,
                     date: newBadge.earnedOn,
@@ -183,57 +258,72 @@ const App: React.FC = () => {
                     title: `Badge Unlocked!`,
                     description: newBadge.name,
                 });
-                return { ...prev, earnedBadges: [...prev.earnedBadges, newBadge] };
+            } catch (error) {
+                console.error('Error unlocking badge:', error);
             }
-            return prev;
-        });
-    }, [setGamificationData, setCelebrationMilestone]);
+        }
+    }, [gamificationData.earnedBadges, setGamificationData, setCelebrationMilestone]);
 
-    const updateStreak = useCallback((type: 'workout' | 'meal' | 'water') => {
-        setGamificationData(prev => {
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
+    const updateStreak = useCallback(async (type: 'workout' | 'meal' | 'water') => {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        
+        const todayStr = today.toISOString().split('T')[0];
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const streak = gamificationData.streaks[type];
+        let newStreak = { ...streak };
+        let xpFromStreak = 0;
+
+        if (streak.lastLogDate !== todayStr) {
+            if (streak.lastLogDate === yesterdayStr) {
+                newStreak.current += 1;
+            } else {
+                newStreak.current = 1;
+            }
+            newStreak.lastLogDate = todayStr;
+            if (newStreak.current > newStreak.longest) newStreak.longest = newStreak.current;
+            if (newStreak.current >= 3) xpFromStreak += 50;
             
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            const streak = prev.streaks[type];
-            let newStreak = { ...streak };
-            let xpFromStreak = 0;
-
-            if (streak.lastLogDate !== todayStr) {
-                if (streak.lastLogDate === yesterdayStr) {
-                    newStreak.current += 1;
-                } else {
-                    newStreak.current = 1;
+            try {
+                await gamificationService.updateStreak(type, newStreak.current, newStreak.longest, newStreak.lastLogDate);
+                if (xpFromStreak > 0) {
+                    await gamificationService.addXP(xpFromStreak);
                 }
-                newStreak.lastLogDate = todayStr;
-                if (newStreak.current > newStreak.longest) newStreak.longest = newStreak.current;
-                if (newStreak.current >= 3) xpFromStreak += 50;
+                setGamificationData(prev => ({
+                    ...prev,
+                    xp: prev.xp + xpFromStreak,
+                    streaks: { ...prev.streaks, [type]: newStreak }
+                }));
+            } catch (error) {
+                console.error('Error updating streak:', error);
             }
-            
-            return { ...prev, xp: prev.xp + xpFromStreak, streaks: { ...prev.streaks, [type]: newStreak }};
-        });
-    }, [setGamificationData]);
+        }
+    }, [gamificationData.streaks, setGamificationData]);
 
     const todayStr = new Date().toISOString().split('T')[0];
     const todaysWaterIntake = waterLogs.find(log => log.date === todayStr)?.intake ?? 0;
 
-    const setTodaysWaterIntake = useCallback((intakeOrCallback: number | ((prev: number) => number)) => {
+    const setTodaysWaterIntake = useCallback(async (intakeOrCallback: number | ((prev: number) => number)) => {
         const oldIntake = waterLogs.find(log => log.date === todayStr)?.intake ?? 0;
+        const newIntake = typeof intakeOrCallback === 'function' ? intakeOrCallback(oldIntake) : intakeOrCallback;
         
-        setWaterLogs(prevLogs => {
-            const newIntake = typeof intakeOrCallback === 'function' ? intakeOrCallback(oldIntake) : intakeOrCallback;
-            const newLogs = prevLogs.filter(log => log.date !== todayStr);
-            newLogs.push({ date: todayStr, intake: newIntake });
-            return newLogs;
-        });
+        try {
+            await progressService.updateWaterLog(todayStr, newIntake);
+            setWaterLogs(prevLogs => {
+                const newLogs = prevLogs.filter(log => log.date !== todayStr);
+                newLogs.push({ date: todayStr, intake: newIntake });
+                return newLogs;
+            });
 
-        awardXp(5);
-        if(oldIntake < waterGoal && (typeof intakeOrCallback === 'function' ? intakeOrCallback(oldIntake) : intakeOrCallback) >= waterGoal) {
-            updateStreak('water');
-            unlockBadge('hydration_hero_1');
+            await awardXp(5);
+            if(oldIntake < waterGoal && newIntake >= waterGoal) {
+                await updateStreak('water');
+                await unlockBadge('hydration_hero_1');
+            }
+        } catch (error) {
+            console.error('Error updating water intake:', error);
         }
     }, [setWaterLogs, todayStr, waterLogs, awardXp, updateStreak, unlockBadge, waterGoal]);
 
@@ -273,15 +363,21 @@ const App: React.FC = () => {
     const isTrainingDay = !!todaysWorkout;
     const activeMacroTargets = autoAdjustMacros && isTrainingDay ? macroTargets.training : macroTargets.rest;
 
-    const addMeal = useCallback((type: Meal['type'], items: FoodItem[]) => {
+    const addMeal = useCallback(async (type: Meal['type'], items: FoodItem[]) => {
         if (items.length === 0) return;
         const newMeal: Meal = { id: new Date().toISOString(), type, items, timestamp: new Date() };
-        setMeals(prevMeals => {
-            if(prevMeals.length === 0) unlockBadge('log_first_meal');
-            return [...prevMeals, newMeal];
-        });
-        awardXp(meals.length > 0 ? 30 : 20); // 20xp for first meal, +10 bonus for subsequent
-        updateStreak('meal');
+        
+        try {
+            const savedMeal = await mealService.addMeal(newMeal);
+            setMeals(prevMeals => {
+                if(prevMeals.length === 0) unlockBadge('log_first_meal');
+                return [...prevMeals, savedMeal];
+            });
+            awardXp(meals.length > 0 ? 30 : 20);
+            updateStreak('meal');
+        } catch (error) {
+            console.error('Error adding meal:', error);
+        }
     }, [setMeals, awardXp, updateStreak, unlockBadge, meals.length]);
     
     const removeFoodItem = useCallback((mealId: string, itemIndex: number) => {
@@ -424,6 +520,15 @@ const App: React.FC = () => {
             default: return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} gamificationData={gamificationData} levelInfo={levelInfo} />;
         }
     };
+
+    if (isInitializing) {
+        return (
+            <div className="max-w-lg mx-auto bg-black min-h-screen flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-zinc-700 border-t-green-500 rounded-full animate-spin mb-4"></div>
+                <p className="text-zinc-400 text-lg">Loading your fitness data...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-lg mx-auto bg-black min-h-screen font-sans">
