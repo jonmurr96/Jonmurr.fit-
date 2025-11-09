@@ -604,6 +604,20 @@ export interface ParsedWorkout {
   unmatchedExercises: string[];
 }
 
+export interface ParsedWorkoutWithReview {
+  program: TrainingProgram;
+  unmatchedExercises: string[];
+  review: {
+    feedback: string;
+    balanceScore: number;
+    volumeAssessment: 'appropriate' | 'too high' | 'too low';
+    missingGroups: string[];
+    recoveryConcerns: boolean;
+    severity: 'info' | 'warning';
+    recommendedFocusAreas: string[];
+  };
+}
+
 export const parseWorkoutText = async (text: string): Promise<ParsedWorkout | null> => {
   try {
     const prompt = `You are an expert AI workout plan parser. Your task is to analyze the provided workout text and extract structured workout data.
@@ -730,5 +744,137 @@ Provide 2-3 short, actionable suggestions. Be encouraging but honest. Keep it un
   } catch (error) {
     console.error("Error reviewing imported workout:", error);
     return "Great job importing your workout! Make sure to balance push and pull exercises, and don't forget leg day!";
+  }
+};
+
+export const parseAndReviewWorkout = async (text: string): Promise<ParsedWorkoutWithReview | null> => {
+  try {
+    const prompt = `You are an expert AI workout plan parser and fitness coach. Your task is to:
+1. Parse the workout text into structured data
+2. Analyze and review the workout plan quality
+
+**Input Text:**
+${text}
+
+**TASK 1 - PARSE WORKOUT:**
+Extract the program name (or create "Imported Workout Plan"), duration in weeks (default 4), exercises with sets/reps/rest, organize into workout days, infer split type, and create a description.
+
+**Format Rules:**
+- Each workout day: "day" number (1-7), "focus" field (e.g., "Push (Chest, Shoulders, Triceps)")
+- Standardize exercise names (e.g., "Bench Press" not "bench")
+- Rest time default: 1.5 minutes if not specified
+- Rep range examples: "8-12 reps" or "AMRAP"
+
+**TASK 2 - REVIEW WORKOUT:**
+Analyze the parsed workout for:
+1. Muscle group balance (push/pull ratio, upper/lower balance) - Rate 0-10
+2. Volume appropriateness - Classify as "appropriate", "too high", or "too low"
+3. Missing muscle groups - List any missing (e.g., ["legs", "back"])
+4. Recovery concerns - Boolean (true if insufficient rest days)
+5. Severity - "info" (looks good) or "warning" (has issues)
+6. Recommended focus areas - List 1-3 areas to improve (e.g., ["Add leg day", "Increase back volume"])
+
+Provide 2-3 short, actionable suggestions in feedback. Be encouraging but honest. Keep it under 100 words.
+
+Your response MUST be valid JSON adhering to the provided schema.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.3,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            programName: { type: Type.STRING },
+            durationWeeks: { type: Type.NUMBER },
+            description: { type: Type.STRING },
+            splitType: { type: Type.STRING },
+            workouts: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  day: { type: Type.NUMBER },
+                  focus: { type: Type.STRING },
+                  completed: { type: Type.BOOLEAN },
+                  exercises: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        id: { type: Type.STRING },
+                        name: { type: Type.STRING },
+                        sets: {
+                          type: Type.ARRAY,
+                          items: {
+                            type: Type.OBJECT,
+                            properties: {
+                              id: { type: Type.NUMBER },
+                              targetReps: { type: Type.STRING },
+                              completed: { type: Type.BOOLEAN },
+                              restMinutes: { type: Type.NUMBER }
+                            },
+                            required: ["id", "targetReps", "completed", "restMinutes"]
+                          }
+                        }
+                      },
+                      required: ["id", "name", "sets"]
+                    }
+                  }
+                },
+                required: ["id", "day", "focus", "completed", "exercises"]
+              }
+            },
+            review: {
+              type: Type.OBJECT,
+              properties: {
+                feedback: { type: Type.STRING },
+                balanceScore: { type: Type.NUMBER },
+                volumeAssessment: { type: Type.STRING },
+                missingGroups: { type: Type.ARRAY, items: { type: Type.STRING } },
+                recoveryConcerns: { type: Type.BOOLEAN },
+                severity: { type: Type.STRING },
+                recommendedFocusAreas: { type: Type.ARRAY, items: { type: Type.STRING } }
+              },
+              required: ["feedback", "balanceScore", "volumeAssessment", "missingGroups", "recoveryConcerns", "severity", "recommendedFocusAreas"]
+            }
+          },
+          required: ["programName", "durationWeeks", "description", "splitType", "workouts", "review"]
+        }
+      }
+    });
+
+    const jsonStr = response.text.trim();
+    const parsed = JSON.parse(jsonStr);
+    
+    const program: TrainingProgram = {
+      programName: parsed.programName,
+      durationWeeks: parsed.durationWeeks,
+      description: parsed.description,
+      splitType: parsed.splitType,
+      workouts: parsed.workouts
+    };
+    
+    const review = {
+      feedback: parsed.review.feedback || "Great job importing your workout!",
+      balanceScore: Math.max(0, Math.min(10, parsed.review.balanceScore || 5)),
+      volumeAssessment: (parsed.review.volumeAssessment as 'appropriate' | 'too high' | 'too low') || 'appropriate',
+      missingGroups: parsed.review.missingGroups || [],
+      recoveryConcerns: parsed.review.recoveryConcerns || false,
+      severity: (parsed.review.severity as 'info' | 'warning') || 'info',
+      recommendedFocusAreas: parsed.review.recommendedFocusAreas || []
+    };
+    
+    return {
+      program,
+      unmatchedExercises: [],
+      review
+    };
+  } catch (error) {
+    console.error("Error parsing and reviewing workout:", error);
+    return null;
   }
 };

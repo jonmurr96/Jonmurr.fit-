@@ -1323,7 +1323,7 @@ const SavedWorkoutsView: React.FC<{
                                         {workout.programName}
                                         {workout.isPinned && <PinIcon className="w-4 h-4 text-amber-400 fill-amber-400" />}
                                     </p>
-                                    <p className="text-sm text-zinc-400">{workout.workouts.length} days &bull; {workout.tags.slice(0, 2).join(', ')}</p>
+                                    <p className="text-sm text-zinc-400">{workout.workouts.length} days &bull; {workout.tags?.slice(0, 2).join(', ') || 'No tags'}</p>
                                     {workout.lastPerformed && <p className="text-xs text-zinc-500 mt-1">Last performed: {timeSince(workout.lastPerformed)}</p>}
                                 </div>
                                 <div className="flex items-center gap-2">

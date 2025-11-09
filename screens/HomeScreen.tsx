@@ -410,7 +410,7 @@ const QuickStartCard: React.FC<{
                                 {workout.isPinned && <PinIcon className="w-4 h-4 text-amber-400 fill-amber-400" />}
                             </p>
                             <p className="text-sm text-zinc-400">
-                                {workout.workouts.length} days &bull; {workout.tags.slice(0, 2).join(', ')}
+                                {workout.workouts.length} days &bull; {workout.tags?.slice(0, 2).join(', ') || 'No tags'}
                             </p>
                         </div>
                         <ChevronRightIcon className="w-6 h-6 text-zinc-600" />

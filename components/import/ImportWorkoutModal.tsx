@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { TrainingProgram } from '../../types';
-import { parseWorkoutText, reviewImportedWorkout } from '../../services/geminiService';
+import { parseAndReviewWorkout } from '../../services/geminiService';
 import { SparklesIcon, DocumentIcon, CameraIcon, LinkIcon, XIcon } from '../Icons';
 
 interface ImportWorkoutModalProps {
@@ -41,7 +41,7 @@ export const ImportWorkoutModal: React.FC<ImportWorkoutModalProps> = ({ isOpen, 
     setError('');
 
     try {
-      const result = await parseWorkoutText(inputText);
+      const result = await parseAndReviewWorkout(inputText);
       
       if (!result || !result.program) {
         setError('Could not parse workout. Please check the format and try again.');
@@ -49,9 +49,7 @@ export const ImportWorkoutModal: React.FC<ImportWorkoutModalProps> = ({ isOpen, 
       }
 
       setParsedProgram(result.program);
-      
-      const review = await reviewImportedWorkout(result.program);
-      setAiReview(review);
+      setAiReview(result.review.feedback);
       
       setStep('review');
     } catch (err) {
@@ -75,7 +73,7 @@ export const ImportWorkoutModal: React.FC<ImportWorkoutModalProps> = ({ isOpen, 
       setSelectedMethod('text');
       
       try {
-        const result = await parseWorkoutText(text);
+        const result = await parseAndReviewWorkout(text);
         
         if (!result || !result.program) {
           setError('Could not parse workout. Please check the format and try again.');
@@ -83,9 +81,7 @@ export const ImportWorkoutModal: React.FC<ImportWorkoutModalProps> = ({ isOpen, 
         }
 
         setParsedProgram(result.program);
-        
-        const review = await reviewImportedWorkout(result.program);
-        setAiReview(review);
+        setAiReview(result.review.feedback);
         
         setStep('review');
       } catch (parseErr) {
