@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { BottomNav } from './components/BottomNav';
-import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences, GamificationState, EarnedBadge, LevelInfo } from './types';
+import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences, GamificationState, EarnedBadge, LevelInfo, ExtendedLevelInfo, UnlockedLoot } from './types';
 import { generateWorkoutPlan, generateMealPlan } from './services/geminiService';
-import { calculateLevelInfo, ALL_BADGES, getInitialChallenges } from './utils/gamification';
+import { calculateLevelInfo, calculateExtendedLevelInfo, ALL_BADGES, getInitialChallenges } from './utils/gamification';
 import { userService, mealService, workoutService, progressService, gamificationService, mealPlanService } from './services/database';
 
 
