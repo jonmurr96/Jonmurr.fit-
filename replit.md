@@ -6,6 +6,42 @@ Jonmurr.fit is an AI-powered fitness tracking application built with React, Type
 ## User Preferences
 None documented yet - this is a fresh import.
 
+## Recent Changes (Nov 9, 2025)
+
+### XP Toast Bug Fix (Latest - Nov 9, 2025 @ 8:57 PM)
+- **🐛 Fixed Stuck XP Toast**: Resolved issue where "+0 XP" toast wouldn't dismiss
+  - Root cause: App was awarding 0 XP for "Check protein badge" when protein goal was hit
+  - Changed to award 25 XP for "Hit protein goal" instead of 0 XP for badge check
+  - Toast now displays meaningful reward and auto-dismisses after 3 seconds
+  - Users now get rewarded for achieving protein goals (once per day)
+
+### Workout Status System Implementation (Nov 9, 2025 @ 6:05 PM)
+- **🏷️ Status Tagging System**: Implemented Active/Inactive/Draft workflow status system
+  - Added `status: 'active' | 'inactive' | 'draft'` field to SavedWorkout type
+  - Created `StatusBadge` component with color-coded tags (Active=green, Inactive=gray, Draft=yellow)
+  - **Single Active Plan Rule**: Only ONE workout can be active at a time (enforced by setActiveWorkout)
+  - Users can save unlimited workouts but must designate one as their active plan
+- **🎯 Smart UI Organization**: TrainScreen now organizes workouts by status
+  - **Active Plan** section (if exists) → Shows current active workout at top
+  - **Drafts** section (if exist) → Shows incomplete/experimental workouts
+  - **My Library** section → Shows all inactive saved workouts
+  - Each workout card displays StatusBadge next to title
+  - "Set as Active" button on inactive workouts
+- **⚡ HomeScreen QuickStart Update**: Now shows ONLY the active plan
+  - QuickStart card displays the single active workout (if one exists)
+  - Added "Active Plan" label for clarity
+  - Card hidden entirely if no active plan is set
+  - Removed old pinned/recent logic in favor of explicit active status
+- **🔄 Backward Compatibility**: Normalization useEffect backfills existing workouts
+  - All saved workouts without status automatically set to 'inactive'
+  - Runs once on app mount, guards against re-renders
+  - Ensures smooth transition for users with existing workout libraries
+- **💾 Database Migration Pending**: Supabase migration needed for persistence
+  - Status field currently client-side only (localStorage)
+  - Future migration: Add status column to saved_workouts table with default 'inactive'
+  - Will enable cross-device status synchronization
+- **✅ Architect Approved**: Full implementation reviewed and passed
+
 ## System Architecture
 
 ### UI/UX Decisions

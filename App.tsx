@@ -346,7 +346,7 @@ const App: React.FC = () => {
                 const todayDate = new Date().toISOString().split('T')[0];
                 
                 if (lastProteinDate !== todayDate) {
-                    await awardXpWithContext(0, 'Check protein badge', 'protein_check', {
+                    await awardXpWithContext(25, 'Hit protein goal', 'protein_goal', {
                         proteinHit: true
                     });
                     localStorage.setItem('jonmurrfit-lastProteinCheck', todayDate);
