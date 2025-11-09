@@ -6,6 +6,23 @@ This is an AI-powered fitness tracking application built with React, TypeScript,
 **Current State**: Successfully configured for Replit environment and ready to run.
 
 ## Recent Changes (Nov 9, 2025)
+
+### Database Setup & Bug Fixes (Latest)
+- **🔧 Fixed Meal Logging Bug**: Identified and resolved critical issue where meals weren't saving
+  - Root cause: Database tables didn't exist in Supabase (schema not applied)
+  - Fixed database upsert conflict: Added `onConflict: 'user_id,date'` to daily_logs upsert
+  - Fixed removeFoodItem: Now properly syncs with database and maintains correct meal IDs
+- **🚀 Added Database Health Check System**: 
+  - Created healthCheck.ts service that detects missing tables on app startup
+  - Built SetupModal component with clear 8-step instructions to apply schema
+  - Integrated automatic detection: App shows setup modal if database tables are missing
+  - User-friendly retry mechanism after schema is applied
+- **📝 Important**: Users must apply schema.sql to Supabase before app will function
+  - See SetupModal for step-by-step instructions
+  - Schema creates all 23 required tables
+  - One-time setup process
+
+### Earlier Nov 9 Changes
 - **GitHub Import Setup**: Configured the project to run in Replit environment
 - **Port Configuration**: Changed dev server from port 3000 to 5000 for Replit webview compatibility
 - **Security Update**: Moved WGER_API_KEY from hardcoded value to environment variable
