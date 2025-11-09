@@ -14,6 +14,7 @@ const TrainScreen = React.lazy(() => import('./screens/TrainScreen').then(module
 const LogScreen = React.lazy(() => import('./screens/LogScreen').then(module => ({ default: module.LogScreen })));
 const ProgressScreen = React.lazy(() => import('./screens/ProgressScreen').then(module => ({ default: module.ProgressScreen })));
 const CoachScreen = React.lazy(() => import('./screens/CoachScreen').then(module => ({ default: module.CoachScreen })));
+const GamificationScreen = React.lazy(() => import('./screens/GamificationScreen').then(module => ({ default: module.GamificationScreen })));
 
 
 const MOCK_USER: UserProfile = {
@@ -450,6 +451,7 @@ const App: React.FC = () => {
             case 'log': return <LogScreen meals={meals} addMeal={addMeal} removeFoodItem={removeFoodItem} quickAddMeals={quickAddMeals} addQuickAddMeal={addQuickAddMeal} onGenerateMealPlan={handleGenerateMealPlan} isGeneratingMealPlan={isGeneratingMealPlan} generatedMealPlan={generatedMealPlan} onActivateMealPlan={handleActivateMealPlan} activeMealPlan={activeMealPlan} onDeactivateMealPlan={handleDeactivateMealPlan} onUpdateActiveMealPlan={updateActiveMealPlan} user={user} currentWeightKg={currentWeightKg} weightUnit={weightUnit}/>;
             case 'progress': return <ProgressScreen user={user} photos={photos} setPhotos={setPhotos} dailyLogs={dailyLogs} macroTargets={activeMacroTargets} weightLogs={weightLogs} setWeightLogs={setWeightLogs} currentWeightKg={currentWeightKg} setCurrentWeightKg={setCurrentWeightKg} weightGoalKg={weightGoalKg} setWeightGoalKg={setWeightGoalKg} waterIntake={todaysWaterIntake} setWaterIntake={setTodaysWaterIntake} waterGoal={waterGoal} setWaterGoal={setWaterGoal} weightUnit={weightUnit} setWeightUnit={setWeightUnit} waterUnit={waterUnit} setWaterUnit={setWaterUnit} waterLogs={waterLogs} milestones={milestones} addMilestone={addMilestone} celebrationMilestone={celebrationMilestone} setCelebrationMilestone={setCelebrationMilestone} gamificationData={gamificationData} levelInfo={levelInfo} lootInventory={lootInventory} />;
             case 'coach': return <CoachScreen />;
+            case 'gamification': return <GamificationScreen gamificationData={gamificationData} levelInfo={levelInfo} lootInventory={lootInventory} />;
             default: return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} gamificationData={gamificationData} levelInfo={levelInfo} lootInventory={lootInventory} />;
         }
     };

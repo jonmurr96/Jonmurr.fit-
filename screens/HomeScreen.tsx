@@ -421,8 +421,24 @@ const QuickStartCard: React.FC<{
     );
 };
 
-const XPBar: React.FC<{ gamificationData: GamificationState; levelInfo: LevelInfo; }> = ({ gamificationData, levelInfo }) => (
-    <div className="bg-zinc-900 rounded-2xl p-4">
+const XPBar: React.FC<{
+    gamificationData: GamificationState;
+    levelInfo: LevelInfo;
+    setActiveScreen: (screen: Screen) => void;
+}> = ({ gamificationData, levelInfo, setActiveScreen }) => (
+    <div
+        className="bg-zinc-900 rounded-2xl p-4 cursor-pointer hover:bg-zinc-800 transition-colors active:scale-[0.98]"
+        onClick={() => setActiveScreen('gamification')}
+        role="button"
+        aria-label="View gamification dashboard"
+        tabIndex={0}
+        onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setActiveScreen('gamification');
+            }
+        }}
+    >
         <div className="flex justify-between items-center mb-2 text-sm">
             <p className="font-bold text-green-400">{levelInfo.level}</p>
             <p className="font-mono text-zinc-400">
@@ -432,6 +448,7 @@ const XPBar: React.FC<{ gamificationData: GamificationState; levelInfo: LevelInf
         <div className="w-full bg-zinc-700 rounded-full h-2.5">
             <div className="bg-green-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${levelInfo.progress}%` }}></div>
         </div>
+        <div className="mt-2 text-center text-xs text-green-400 opacity-70">Tap to view full stats</div>
     </div>
 );
 
@@ -560,7 +577,7 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
         gamificationData={gamificationData}
       />
 
-      <XPBar gamificationData={gamificationData} levelInfo={levelInfo} />
+      <XPBar gamificationData={gamificationData} levelInfo={levelInfo} setActiveScreen={setActiveScreen} />
 
       <div className="bg-zinc-900 rounded-2xl p-6 flex flex-col items-center relative">
         <button onClick={() => setIsEditingMacros(true)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10" aria-label="Edit macro goals">

@@ -1,5 +1,5 @@
 
-export type Screen = 'home' | 'train' | 'log' | 'progress' | 'coach';
+export type Screen = 'home' | 'train' | 'log' | 'progress' | 'coach' | 'gamification';
 
 export interface UserProfile {
   name: string;
