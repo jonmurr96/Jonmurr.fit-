@@ -322,8 +322,15 @@ const App: React.FC = () => {
             await updateStreak('meal');
         } catch (error) {
             console.error('Error adding meal:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+                alert('⚠️ Database Setup Required\n\nYour database tables need to be created first. Please follow the setup instructions in the modal to apply the schema.sql file to your Supabase project.');
+                setShowSetupModal(true);
+            } else {
+                alert('Failed to save meal. Please check your database connection.');
+            }
         }
-    }, [setMeals, awardXpWithContext, updateStreak, meals.length]);
+    }, [setMeals, awardXpWithContext, updateStreak, meals.length, setShowSetupModal]);
     
     const removeFoodItem = useCallback(async (mealId: string, itemIndex: number) => {
         try {
