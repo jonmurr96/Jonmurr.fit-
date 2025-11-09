@@ -80,7 +80,8 @@ export const progressService = {
         user_id: USER_ID,
         date,
         intake_oz: intakeOz,
-        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,date'
       });
 
     if (error) {

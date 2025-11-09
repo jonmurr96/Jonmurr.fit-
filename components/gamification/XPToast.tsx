@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface XPToastProps {
   amount: number;
@@ -8,10 +8,18 @@ interface XPToastProps {
 }
 
 export const XPToast: React.FC<XPToastProps> = ({ amount, reason, onDismiss, duration = 3000 }) => {
+  const dismissRef = useRef(onDismiss);
+  
   useEffect(() => {
-    const timer = setTimeout(onDismiss, duration);
+    dismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      dismissRef.current();
+    }, duration);
     return () => clearTimeout(timer);
-  }, [onDismiss, duration]);
+  }, [duration]);
 
   return (
     <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
