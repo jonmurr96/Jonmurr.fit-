@@ -307,6 +307,37 @@ const App: React.FC = () => {
     const isTrainingDay = !!todaysWorkout;
     const activeMacroTargets = autoAdjustMacros && isTrainingDay ? macroTargets.training : macroTargets.rest;
 
+    useEffect(() => {
+        const checkMacroGoalCompletion = async () => {
+            if (meals.length === 0) return;
+            
+            const tolerance = 0.05;
+            const caloriesMatch = Math.abs(macrosToday.calories - activeMacroTargets.calories) / activeMacroTargets.calories <= tolerance;
+            const proteinMatch = macrosToday.protein >= activeMacroTargets.protein * 0.95;
+            const carbsMatch = Math.abs(macrosToday.carbs - activeMacroTargets.carbs) / activeMacroTargets.carbs <= tolerance;
+            const fatMatch = Math.abs(macrosToday.fat - activeMacroTargets.fat) / activeMacroTargets.fat <= tolerance;
+            
+            const allMacrosHit = caloriesMatch && proteinMatch && carbsMatch && fatMatch;
+            
+            if (allMacrosHit) {
+                const lastMacroAwardDate = localStorage.getItem('jonmurrfit-lastMacroAward');
+                const todayDate = new Date().toISOString().split('T')[0];
+                
+                if (lastMacroAwardDate !== todayDate) {
+                    await awardXpWithContext(50, 'Hit all macro goals', 'macro_complete', {
+                        calories: macrosToday.calories,
+                        protein: macrosToday.protein,
+                        carbs: macrosToday.carbs,
+                        fat: macrosToday.fat
+                    });
+                    localStorage.setItem('jonmurrfit-lastMacroAward', todayDate);
+                }
+            }
+        };
+        
+        checkMacroGoalCompletion();
+    }, [macrosToday, activeMacroTargets, meals.length, awardXpWithContext]);
+
     const addMeal = useCallback(async (type: Meal['type'], items: FoodItem[]) => {
         if (items.length === 0) return;
         const newMeal: Meal = { id: new Date().toISOString(), type, items, timestamp: new Date() };

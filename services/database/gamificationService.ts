@@ -52,6 +52,8 @@ export const gamificationService = {
         user_id: USER_ID,
         xp: newXP,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'
       });
 
     if (error) {
@@ -109,6 +111,8 @@ export const gamificationService = {
         longest_streak: longest,
         last_log_date: lastLogDate,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,streak_type'
       });
 
     if (error) {
@@ -199,6 +203,8 @@ export const gamificationService = {
         type: challenge.type,
         period: challenge.period,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,challenge_id'
       });
 
     if (error) {
@@ -225,7 +231,9 @@ export const gamificationService = {
 
     const { error } = await supabase
       .from('challenges')
-      .upsert(records);
+      .upsert(records, {
+        onConflict: 'user_id,challenge_id'
+      });
 
     if (error) {
       console.error('Error saving challenges:', error);
@@ -277,6 +285,8 @@ export const gamificationService = {
         xp_multiplier: oldLevelInfo.xpMultiplier,
         perks_unlocked: newLevelInfo.perksUnlocked,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'
       });
 
     if (leveledUp) {

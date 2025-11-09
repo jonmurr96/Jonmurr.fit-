@@ -7,11 +7,20 @@ This is an AI-powered fitness tracking application built with React, TypeScript,
 
 ## Recent Changes (Nov 9, 2025)
 
-### Database Setup & Bug Fixes (Latest)
+### Database Setup & Bug Fixes (Latest - Nov 9, 2025)
 - **🔧 Fixed Meal Logging Bug**: Identified and resolved critical issue where meals weren't saving
   - Root cause: Database tables didn't exist in Supabase (schema not applied)
   - Fixed database upsert conflict: Added `onConflict: 'user_id,date'` to daily_logs upsert
   - Fixed removeFoodItem: Now properly syncs with database and maintains correct meal IDs
+- **⚡ Fixed XP System Bug**: Resolved critical issue where ALL XP rewards were failing
+  - Root cause: Missing `onConflict` parameters in 5 different upsert operations
+  - Fixed gamification_state, streaks, challenges, and user_gamification_profile tables
+  - XP now awards correctly for workouts (200 XP), meals (30 XP), water (10 XP), AI (75 XP)
+- **🎯 Added Macro Goal Completion XP**: NEW FEATURE - Earn XP for hitting your macro targets
+  - Awards 50 XP when you hit ALL macro goals (calories, protein, carbs, fat) in one day
+  - Tolerances: ±5% for calories/carbs/fat, ≥95% for protein
+  - Once per day reward system (prevents duplicate XP)
+  - Triggers "Macro Perfectionist" badge check
 - **🚀 Added Database Health Check System**: 
   - Created healthCheck.ts service that detects missing tables on app startup
   - Built SetupModal component with clear 8-step instructions to apply schema
