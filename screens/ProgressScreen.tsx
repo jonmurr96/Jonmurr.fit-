@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { WeightLog, DailyLog, MacroDayTarget, UserProfile, PhotoBundle, PhotoAngle, PhotoEntry, WaterLog, Milestone, MilestoneType } from '../types';
+import { WeightLog, DailyLog, MacroDayTarget, UserProfile, PhotoBundle, PhotoAngle, PhotoEntry, WaterLog, Milestone, MilestoneType, GamificationState, LevelInfo, EarnedBadge } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceLine } from 'recharts';
-import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, CameraIcon, ArrowsRightLeftIcon, ListIcon, ChartLineIcon, TrophyIcon, FireIcon, PlusIcon } from '../components/Icons';
+import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, CameraIcon, ArrowsRightLeftIcon, ListIcon, ChartBarIconOutline, TrophyIcon, FireIcon, PlusIcon } from '../components/Icons';
+import { ALL_BADGES } from '../utils/gamification';
 
 type WeightUnit = 'kg' | 'lbs';
 type WaterUnit = 'oz' | 'ml';
@@ -36,6 +38,10 @@ interface ProgressScreenProps {
   addMilestone: (milestone: Omit<Milestone, 'id' | 'date'>) => void;
   celebrationMilestone: Milestone | null;
   setCelebrationMilestone: (milestone: Milestone | null) => void;
+  gamificationData: GamificationState;
+  levelInfo: LevelInfo;
+  awardXp: (amount: number) => void;
+  unlockBadge: (badgeId: string) => void;
 }
 
 const getIconForMilestone = (type: MilestoneType) => {
@@ -45,6 +51,7 @@ const getIconForMilestone = (type: MilestoneType) => {
         case 'FIRST_PHOTOS': return '📸';
         case 'CONSISTENCY_STREAK': return '🔥';
         case 'WATER_GOAL_TODAY': return '🎉';
+        case 'BADGE_UNLOCKED': return '🌟';
         default: return '⭐';
     }
 };
@@ -630,8 +637,9 @@ const PhotoComparisonModal: React.FC<{
 const ProgressPhotosCard: React.FC<{
   photos: PhotoBundle[];
   setPhotos: (bundles: PhotoBundle[] | ((prev: PhotoBundle[]) => PhotoBundle[])) => void;
-  addMilestone: (milestone: Omit<Milestone, 'id' | 'date'>) => void;
-}> = ({ photos, setPhotos, addMilestone }) => {
+  awardXp: (amount: number) => void;
+  unlockBadge: (badgeId: string) => void;
+}> = ({ photos, setPhotos, awardXp, unlockBadge }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [viewingBundle, setViewingBundle] = useState<PhotoBundle | null>(null);
   const [comparisonSelection, setComparisonSelection] = useState<PhotoBundle | null>(null);
@@ -639,12 +647,10 @@ const ProgressPhotosCard: React.FC<{
 
   const handleSaveUpload = ({ date, files }: { date: string, files: Record<PhotoAngle, File> }) => {
     if (photos.length === 0) {
-        addMilestone({
-            type: 'FIRST_PHOTOS',
-            title: 'First Photos Logged!',
-            description: 'You\'ve started visually tracking your progress. This is a huge step!'
-        });
+        unlockBadge('photogenic');
     }
+    awardXp(30);
+
     const newBundle: PhotoBundle = {
         date,
         photos: {
@@ -655,13 +661,8 @@ const ProgressPhotosCard: React.FC<{
     };
     
     setPhotos(prev => {
-        const existingIndex = prev.findIndex(b => b.date === date);
-        const newPhotos = [...prev];
-        if (existingIndex !== -1) {
-            newPhotos[existingIndex] = newBundle;
-        } else {
-            newPhotos.push(newBundle);
-        }
+        const newPhotos = prev.filter(b => b.date !== date);
+        newPhotos.push(newBundle);
         return newPhotos.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
     setIsUploading(false);
@@ -682,14 +683,10 @@ const ProgressPhotosCard: React.FC<{
   };
 
   const handleSelectForComparison = (secondBundle: PhotoBundle) => {
-    if (!comparisonSelection || secondBundle.date === comparisonSelection.date) {
-        return;
-    }
+    if (!comparisonSelection || secondBundle.date === comparisonSelection.date) return;
     const firstDate = new Date(comparisonSelection.date);
     const secondDate = new Date(secondBundle.date);
-    const [before, after] = firstDate < secondDate
-        ? [comparisonSelection, secondBundle]
-        : [secondBundle, comparisonSelection];
+    const [before, after] = firstDate < secondDate ? [comparisonSelection, secondBundle] : [secondBundle, comparisonSelection];
     setComparisonView({ before, after });
     setComparisonSelection(null);
   };
@@ -739,17 +736,74 @@ const ProgressPhotosCard: React.FC<{
   );
 };
 
+const BadgeGrid: React.FC<{ earnedBadges: EarnedBadge[] }> = ({ earnedBadges }) => {
+    const earnedIds = new Set(earnedBadges.map(b => b.id));
+    return (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+            {ALL_BADGES.map(badge => {
+                const isEarned = earnedIds.has(badge.id);
+                const earnedInfo = earnedBadges.find(b => b.id === badge.id);
+                return (
+                    <div key={badge.id} className={`p-4 rounded-lg text-center transition-opacity ${isEarned ? 'bg-zinc-800' : 'bg-zinc-900 opacity-60'}`} title={badge.description}>
+                        <span className="text-4xl">{badge.icon}</span>
+                        <p className="font-bold text-sm mt-2 h-10 flex items-center justify-center">{badge.name}</p>
+                        {isEarned && <p className="text-xs text-zinc-400 mt-1">Earned {new Date(earnedInfo!.earnedOn + 'T00:00:00').toLocaleDateString()}</p>}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const AchievementsView: React.FC<{ gamificationData: GamificationState; levelInfo: LevelInfo }> = ({ gamificationData, levelInfo }) => (
+    <div className="space-y-6">
+        <div className="bg-zinc-900 rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-2 text-sm">
+                <p className="font-bold text-green-400">{levelInfo.level}</p>
+                <p className="font-mono text-zinc-400">
+                    <span className="font-bold text-white">{gamificationData.xp}</span> / {isFinite(levelInfo.xpForNext) ? levelInfo.xpForNext : 'MAX'} XP
+                </p>
+            </div>
+            <div className="w-full bg-zinc-700 rounded-full h-2.5">
+                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${levelInfo.progress}%` }}></div>
+            </div>
+        </div>
+        
+        <div className="bg-zinc-900 rounded-2xl p-4">
+            <h3 className="text-xl font-bold mb-3">Trophy Case</h3>
+            <BadgeGrid earnedBadges={gamificationData.earnedBadges} />
+        </div>
+
+        <div className="bg-zinc-900 rounded-2xl p-4">
+            <h3 className="text-xl font-bold mb-3">Weekly Challenges</h3>
+            <div className="space-y-3">
+                {gamificationData.challenges.map(c => (
+                     <div key={c.id}>
+                        <p className="text-sm text-zinc-300 font-semibold">{c.title}</p>
+                         <div className="flex justify-between items-center mb-1 text-xs text-zinc-400">
+                             <span>Progress</span>
+                             <span>{c.progress} / {c.goal}</span>
+                         </div>
+                         <div className="w-full bg-zinc-700 rounded-full h-2">
+                            <div className="bg-amber-400 h-2 rounded-full" style={{ width: `${(c.progress / c.goal) * 100}%` }}></div>
+                         </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
 
 const ProgressTabs: React.FC<{
-  activeTab: 'summary' | 'weight' | 'photos' | 'water' | 'milestones';
-  setActiveTab: (tab: 'summary' | 'weight' | 'photos' | 'water' | 'milestones') => void;
+  activeTab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements';
+  setActiveTab: (tab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements') => void;
 }> = ({ activeTab, setActiveTab }) => {
     const tabs = [
         { id: 'summary' as const, label: 'Summary', icon: <ListIcon className="w-5 h-5" /> },
-        { id: 'weight' as const, label: 'Weight', icon: <ChartLineIcon className="w-5 h-5" /> },
+        { id: 'weight' as const, label: 'Weight', icon: <ChartBarIconOutline className="w-5 h-5" /> },
         { id: 'photos' as const, label: 'Photos', icon: <CameraIcon className="w-5 h-5" /> },
         { id: 'water' as const, label: 'Water', icon: <WaterDropIcon className="w-5 h-5" /> },
-        { id: 'milestones' as const, label: 'Milestones', icon: <TrophyIcon className="w-5 h-5" /> },
+        { id: 'achievements' as const, label: 'Achievements', icon: <TrophyIcon className="w-5 h-5" /> },
     ];
     return (
         <div className="flex justify-around bg-zinc-900 p-2 rounded-xl">
@@ -768,21 +822,6 @@ const ProgressTabs: React.FC<{
         </div>
     );
 };
-
-const MilestonesView: React.FC<{ milestones: Milestone[] }> = ({ milestones }) => (
-    <div className="bg-zinc-900 rounded-2xl p-4 space-y-3">
-        {milestones.length > 0 ? milestones.map(m => (
-            <div key={m.id} className="bg-zinc-800 rounded-lg p-3 flex items-start gap-4">
-                <span className="text-3xl mt-1">{getIconForMilestone(m.type)}</span>
-                <div>
-                    <p className="font-bold text-white">{m.title}</p>
-                    <p className="text-sm text-zinc-400">{m.description}</p>
-                    <p className="text-xs text-zinc-500 mt-1">{new Date(m.date + 'T00:00:00').toLocaleDateString()}</p>
-                </div>
-            </div>
-        )) : <p className="text-center text-zinc-500 py-8">No milestones achieved yet. Keep going!</p>}
-    </div>
-);
 
 const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   user,
@@ -808,12 +847,16 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   milestones,
   addMilestone,
   celebrationMilestone,
-  setCelebrationMilestone
+  setCelebrationMilestone,
+  gamificationData,
+  levelInfo,
+  awardXp,
+  unlockBadge,
 }) => {
   const [isLoggingWeight, setIsLoggingWeight] = useState(false);
   const [isEditingWaterGoal, setIsEditingWaterGoal] = useState(false);
   const [isAddingCustomWater, setIsAddingCustomWater] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summary' | 'weight' | 'photos' | 'water' | 'milestones'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'weight' | 'photos' | 'water' | 'achievements'>('summary');
   
   const handleSaveWeight = useCallback((newWeightKg: number, newGoalKg: number) => {
     const today = new Date().toISOString().split('T')[0];
@@ -827,20 +870,17 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
         });
     }
 
+    awardXp(30);
+
     setCurrentWeightKg(newWeightKg);
     setWeightGoalKg(newGoalKg);
     setWeightLogs(prev => {
-        const newLogs = [...prev];
-        const todayLogIndex = newLogs.findIndex(log => log.date === today);
-        if (todayLogIndex > -1) {
-            newLogs[todayLogIndex] = { date: today, weightKg: newWeightKg };
-        } else {
-            newLogs.push({ date: today, weightKg: newWeightKg });
-        }
+        const newLogs = prev.filter(log => log.date !== today);
+        newLogs.push({ date: today, weightKg: newWeightKg });
         return newLogs.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     });
     setIsLoggingWeight(false);
-  }, [setCurrentWeightKg, setWeightGoalKg, setWeightLogs, addMilestone, currentWeightKg, weightGoalKg]);
+  }, [setCurrentWeightKg, setWeightGoalKg, setWeightLogs, addMilestone, currentWeightKg, weightGoalKg, awardXp]);
 
   const handleAddWater = useCallback((amountOz: number) => {
     setWaterIntake(prev => prev + amountOz);
@@ -857,10 +897,6 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
             <WeightGoalCard currentWeightKg={currentWeightKg} weightGoalKg={weightGoalKg} onLogWeight={() => setIsLoggingWeight(true)} unit={weightUnit} setUnit={setWeightUnit} />
             <StreakCard dailyLogs={dailyLogs} targets={macroTargets} />
             <WaterTrackerCard intake={waterIntake} goal={waterGoal} onAddWater={handleAddWater} onEditGoal={() => setIsEditingWaterGoal(true)} unit={waterUnit} setUnit={setWaterUnit} onAddCustom={() => setIsAddingCustomWater(true)} />
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ProgressPhotosCard photos={photos} setPhotos={setPhotos} addMilestone={addMilestone} />
-                <MilestonesView milestones={milestones.slice(0, 3)} />
-            </div>
           </div>
       )}
       {activeTab === 'weight' && (
@@ -869,7 +905,7 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
             <WeightTrendCard weightLogs={weightLogs} unit={weightUnit} goalKg={weightGoalKg} />
         </div>
       )}
-      {activeTab === 'photos' && <ProgressPhotosCard photos={photos} setPhotos={setPhotos} addMilestone={addMilestone}/>}
+      {activeTab === 'photos' && <ProgressPhotosCard photos={photos} setPhotos={setPhotos} awardXp={awardXp} unlockBadge={unlockBadge}/>}
       {activeTab === 'water' && (
         <div className="space-y-6">
             <WaterTrackerCard intake={waterIntake} goal={waterGoal} onAddWater={handleAddWater} onEditGoal={() => setIsEditingWaterGoal(true)} unit={waterUnit} setUnit={setWaterUnit} onAddCustom={() => setIsAddingCustomWater(true)} />
@@ -879,7 +915,7 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
             </div>
         </div>
       )}
-      {activeTab === 'milestones' && <MilestonesView milestones={milestones} />}
+      {activeTab === 'achievements' && <AchievementsView gamificationData={gamificationData} levelInfo={levelInfo} />}
 
       {isLoggingWeight && <LogWeightModal currentWeightKg={currentWeightKg} goalKg={weightGoalKg} onSave={handleSaveWeight} onClose={() => setIsLoggingWeight(false)} unit={weightUnit} setUnit={setWeightUnit} />}
       {isEditingWaterGoal && <EditWaterGoalModal currentGoal={waterGoal} onSave={(g) => { setWaterGoal(g); setIsEditingWaterGoal(false); }} onClose={() => setIsEditingWaterGoal(false)} unit={waterUnit} />}

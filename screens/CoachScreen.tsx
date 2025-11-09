@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { AiMessage } from '../types';
 import { getAICoachResponse } from '../services/geminiService';
-import { BotIcon } from '../components/Icons';
+import { SparklesIconSolid } from '../components/Icons';
 
 export const CoachScreen: React.FC = () => {
   const [messages, setMessages] = useState<AiMessage[]>([
@@ -36,16 +35,16 @@ export const CoachScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full text-white">
-      <header className="p-4 border-b border-zinc-800">
+      <header className="p-4 border-b border-zinc-800 flex-shrink-0">
         <h1 className="text-xl font-bold text-center">AI Coach</h1>
       </header>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         {messages.map((msg, index) => (
           <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
               <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                <BotIcon className="w-5 h-5 text-black" />
+                <SparklesIconSolid className="w-5 h-5 text-black" />
               </div>
             )}
             <div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${msg.role === 'user' ? 'bg-green-500 text-black rounded-br-none' : 'bg-zinc-800 text-white rounded-bl-none'}`}>
@@ -56,7 +55,7 @@ export const CoachScreen: React.FC = () => {
         {isLoading && (
             <div className="flex items-start gap-3 justify-start">
                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                    <BotIcon className="w-5 h-5 text-black" />
+                    <SparklesIconSolid className="w-5 h-5 text-black" />
                  </div>
                  <div className="max-w-xs md:max-w-md p-3 rounded-2xl bg-zinc-800 text-white rounded-bl-none">
                      <div className="flex items-center space-x-1">
@@ -70,7 +69,7 @@ export const CoachScreen: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-black">
+      <div className="fixed bottom-20 left-0 right-0 max-w-lg mx-auto p-4 bg-black border-t border-zinc-800">
         <form onSubmit={handleSend} className="relative">
           <input
             type="text"

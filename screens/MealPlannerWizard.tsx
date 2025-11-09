@@ -126,7 +126,7 @@ const Step1: React.FC<{ prefs: Partial<NutritionPlanPreferences>, update: Functi
         </div>
         <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">Age</label>
-            <input type="number" value={prefs.age || ''} onChange={e => update('age', parseInt(e.target.value))} className="w-full bg-zinc-800 border-2 border-zinc-700 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-green-500" />
+            <input type="number" value={prefs.age || ''} onChange={e => update('age', parseInt(e.target.value) || undefined)} className="w-full bg-zinc-800 border-2 border-zinc-700 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-green-500" />
         </div>
         <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">Target Weight (Optional)</label>

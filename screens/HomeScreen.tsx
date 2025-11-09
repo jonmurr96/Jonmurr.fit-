@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { DailyMacros, MacroDayTarget, UserProfile, Workout, DailyLog, Meal, Screen, MacroTargets, SavedWorkout, TrainingProgram, WorkoutHistory } from '../types';
-import { ArrowsRightLeftIcon, PencilIcon, ChevronRightIcon, PinIcon, TrophyIcon, ArrowLeftIcon } from '../components/Icons';
+import { DailyMacros, MacroDayTarget, UserProfile, Workout, DailyLog, Meal, Screen, MacroTargets, SavedWorkout, TrainingProgram, WorkoutHistory, GamificationState, LevelInfo, Challenge } from '../types';
+import { ArrowsRightLeftIcon, PencilIcon, ChevronRightIcon, PinIcon, TrophyIcon, ArrowLeftIcon, FireIcon } from '../components/Icons';
 
 interface HomeScreenProps {
   user: UserProfile;
@@ -15,6 +16,8 @@ interface HomeScreenProps {
   savedWorkouts: SavedWorkout[];
   startSavedWorkout: (workout: SavedWorkout) => void;
   workoutHistory: WorkoutHistory;
+  gamificationData: GamificationState;
+  levelInfo: LevelInfo;
 }
 
 type DayStatus = 'completed' | 'partial' | 'missed' | 'future';
@@ -76,7 +79,8 @@ const DashboardHeader: React.FC<{
     trainingProgram: TrainingProgram | null;
     workoutHistory: WorkoutHistory;
     autoAdjustMacros: boolean;
-}> = ({ user, dailyLogs, macroTargets, trainingProgram, workoutHistory, autoAdjustMacros }) => {
+    gamificationData: GamificationState;
+}> = ({ user, dailyLogs, macroTargets, trainingProgram, workoutHistory, autoAdjustMacros, gamificationData }) => {
     const [displayDate, setDisplayDate] = useState(new Date());
 
     const getDayStatus = (date: Date): DayStatus => {
@@ -97,9 +101,7 @@ const DashboardHeader: React.FC<{
         const targetsForDay = isTrainingDayForLog ? macroTargets.training : macroTargets.rest;
         
         const macrosMet = log && targetsForDay.protein > 0 &&
-                          log.macros.protein >= targetsForDay.protein &&
-                          log.macros.carbs >= targetsForDay.carbs &&
-                          log.macros.fat >= targetsForDay.fat;
+                          log.macros.protein >= targetsForDay.protein;
 
         // Check Workout Completion
         let workoutCompleted = false;
@@ -126,32 +128,6 @@ const DashboardHeader: React.FC<{
 
         return 'future'; // Default for today if no action taken
     };
-
-    let streak = 0;
-    const todayForStreak = new Date();
-    todayForStreak.setHours(0, 0, 0, 0);
-
-    const sortedLogsAndHistory = [...dailyLogs.map(l => l.date), ...workoutHistory.map(wh => wh.dateCompleted)];
-    const uniqueDates = [...new Set(sortedLogsAndHistory)].sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
-
-    for (const dateStr of uniqueDates) {
-        const checkDate = new Date(dateStr + 'T00:00:00');
-        if (checkDate > todayForStreak) continue;
-        
-        const status = getDayStatus(checkDate);
-        
-        if (checkDate.getTime() === todayForStreak.getTime() && status !== 'completed') {
-            // Don't count an incomplete today towards the streak, but don't break it either.
-            continue;
-        }
-
-        if (status === 'completed') {
-            streak++;
-        } else {
-            // A past day that isn't complete breaks the streak.
-             break;
-        }
-    }
     
     const changeWeek = (direction: 'prev' | 'next') => {
         setDisplayDate(current => {
@@ -172,6 +148,8 @@ const DashboardHeader: React.FC<{
         weekDays.push(date);
     }
     const today = new Date();
+    
+    const overallStreak = Math.max(gamificationData.streaks.meal.current, gamificationData.streaks.workout.current, gamificationData.streaks.water.current);
 
     return (
         <div>
@@ -180,7 +158,7 @@ const DashboardHeader: React.FC<{
                     <h1 className="text-2xl font-bold">Jonmurr.fit</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">{streak}</span>
+                    <span className="text-2xl font-bold">{overallStreak}</span>
                     <span className="text-2xl" role="img" aria-label="streak flame">🔥</span>
                 </div>
             </div>
@@ -443,7 +421,66 @@ const QuickStartCard: React.FC<{
     );
 };
 
-const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTargets, setMacroTargets, trainingProgram, dailyLogs, meals, setActiveScreen, autoAdjustMacros, savedWorkouts, startSavedWorkout, workoutHistory }) => {
+const XPBar: React.FC<{ gamificationData: GamificationState; levelInfo: LevelInfo; }> = ({ gamificationData, levelInfo }) => (
+    <div className="bg-zinc-900 rounded-2xl p-4">
+        <div className="flex justify-between items-center mb-2 text-sm">
+            <p className="font-bold text-green-400">{levelInfo.level}</p>
+            <p className="font-mono text-zinc-400">
+                <span className="font-bold text-white">{gamificationData.xp}</span> / {isFinite(levelInfo.xpForNext) ? levelInfo.xpForNext : 'MAX'} XP
+            </p>
+        </div>
+        <div className="w-full bg-zinc-700 rounded-full h-2.5">
+            <div className="bg-green-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${levelInfo.progress}%` }}></div>
+        </div>
+    </div>
+);
+
+const StreaksWidget: React.FC<{ streaks: GamificationState['streaks'] }> = ({ streaks }) => (
+    <div className="bg-zinc-900 rounded-2xl p-4">
+        <h3 className="font-bold text-white mb-3 text-lg">Daily Streaks</h3>
+        <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <p className="text-2xl">🏋️</p>
+                <p className="font-bold text-xl">{streaks.workout.current}</p>
+                <p className="text-xs text-zinc-400">Workouts</p>
+            </div>
+            <div>
+                <p className="text-2xl">🥗</p>
+                <p className="font-bold text-xl">{streaks.meal.current}</p>
+                <p className="text-xs text-zinc-400">Meals</p>
+            </div>
+            <div>
+                <p className="text-2xl">💧</p>
+                <p className="font-bold text-xl">{streaks.water.current}</p>
+                <p className="text-xs text-zinc-400">Water</p>
+            </div>
+        </div>
+    </div>
+);
+
+const ChallengesWidget: React.FC<{ challenges: Challenge[]; }> = ({ challenges }) => {
+    const activeChallenge = challenges.find(c => !c.isCompleted);
+    if (!activeChallenge) return null;
+
+    const progress = (activeChallenge.progress / activeChallenge.goal) * 100;
+
+    return (
+        <div className="bg-zinc-900 rounded-2xl p-4">
+            <h3 className="font-bold text-white mb-2 text-lg">Weekly Challenge</h3>
+            <p className="text-sm text-zinc-300 font-semibold">{activeChallenge.title}</p>
+            <p className="text-xs text-zinc-400 mb-3">{activeChallenge.description}</p>
+            <div className="flex justify-between items-center mb-1 text-xs text-zinc-400">
+                <span>Progress</span>
+                <span>{activeChallenge.progress} / {activeChallenge.goal}</span>
+            </div>
+            <div className="w-full bg-zinc-700 rounded-full h-2">
+                <div className="bg-amber-400 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+            </div>
+        </div>
+    );
+};
+
+const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTargets, setMacroTargets, trainingProgram, dailyLogs, meals, setActiveScreen, autoAdjustMacros, savedWorkouts, startSavedWorkout, workoutHistory, gamificationData, levelInfo }) => {
   const [isEditingMacros, setIsEditingMacros] = useState(false);
   const [showGoalCompleteModal, setShowGoalCompleteModal] = useState(false);
   
@@ -520,7 +557,10 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
         trainingProgram={trainingProgram} 
         workoutHistory={workoutHistory} 
         autoAdjustMacros={autoAdjustMacros}
+        gamificationData={gamificationData}
       />
+
+      <XPBar gamificationData={gamificationData} levelInfo={levelInfo} />
 
       <div className="bg-zinc-900 rounded-2xl p-6 flex flex-col items-center relative">
         <button onClick={() => setIsEditingMacros(true)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10" aria-label="Edit macro goals">
@@ -606,6 +646,11 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
       
       {isEditingMacros && <EditMacrosModal initialTargets={macroTargets} onSave={setMacroTargets} onClose={() => setIsEditingMacros(false)} />}
       {showGoalCompleteModal && <GoalCompleteModal onClose={() => setShowGoalCompleteModal(false)} />}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StreaksWidget streaks={gamificationData.streaks} />
+        <ChallengesWidget challenges={gamificationData.challenges} />
+      </div>
 
       <QuickStartCard savedWorkouts={savedWorkouts} onStart={handleStartWorkout} />
 
@@ -620,7 +665,13 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
             if (!trainingProgram) {
                 return (
                     <div className="text-center py-4">
-                        <p className="text-zinc-400">No active training plan.</p>
+                        <p className="text-zinc-400 mb-4">No active training plan.</p>
+                        <button
+                          onClick={() => setActiveScreen('train')}
+                          className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-lg transition-colors"
+                        >
+                          Create Workout Plan
+                        </button>
                     </div>
                 );
             }

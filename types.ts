@@ -184,7 +184,7 @@ export interface WaterLog {
   intake: number; // in oz
 }
 
-export type MilestoneType = 'WEIGHT_GOAL' | 'WATER_STREAK' | 'FIRST_PHOTOS' | 'CONSISTENCY_STREAK' | 'WATER_GOAL_TODAY';
+export type MilestoneType = 'WEIGHT_GOAL' | 'WATER_STREAK' | 'FIRST_PHOTOS' | 'CONSISTENCY_STREAK' | 'WATER_GOAL_TODAY' | 'BADGE_UNLOCKED';
 
 export interface Milestone {
   id: string; // e.g., '2024-08-01-WEIGHT_GOAL'
@@ -276,4 +276,61 @@ export interface GeneratedMealPlan {
     planName: string;
     description: string;
     dailyPlan: DailyMealPlan;
+}
+
+// --- Gamification Types ---
+export type Level = 'Beginner' | 'Intermediate' | 'Advanced' | 'Elite';
+
+export interface LevelInfo {
+  level: Level;
+  xpForNext: number;
+  levelMinXp: number;
+  levelMaxXp: number;
+  progress: number;
+}
+
+export interface StreakData {
+  current: number;
+  longest: number;
+  lastLogDate: string; // "YYYY-MM-DD"
+}
+
+export type BadgeCategory = 'Workout' | 'Nutrition' | 'Consistency' | 'Special';
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  category: BadgeCategory;
+  icon: string; // emoji
+}
+
+export interface EarnedBadge extends Badge {
+  earnedOn: string; // "YYYY-MM-DD"
+}
+
+export type ChallengeType = 'logXWorkouts' | 'hitProteinXDays' | 'drinkXWaterXDays' | 'logXMeals';
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  goal: number;
+  progress: number;
+  xpReward: number;
+  badgeId?: string;
+  isCompleted: boolean;
+  type: ChallengeType;
+  period: 'weekly';
+}
+
+export interface GamificationState {
+  xp: number;
+  streaks: {
+    workout: StreakData;
+    meal: StreakData;
+    water: StreakData;
+  };
+  earnedBadges: EarnedBadge[];
+  challenges: Challenge[];
 }

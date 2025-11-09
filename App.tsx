@@ -1,7 +1,10 @@
+
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { BottomNav } from './components/BottomNav';
-import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences } from './types';
+import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences, GamificationState, EarnedBadge, LevelInfo } from './types';
 import { generateWorkoutPlan, generateMealPlan } from './services/geminiService';
+import { calculateLevelInfo, ALL_BADGES, getInitialChallenges } from './utils/gamification';
+
 
 // Lazy load screen components for better performance
 const HomeScreen = React.lazy(() => import('./screens/HomeScreen').then(module => ({ default: module.HomeScreen })));
@@ -137,6 +140,19 @@ const App: React.FC = () => {
     const [generatedMealPlan, setGeneratedMealPlan] = useStickyState<GeneratedMealPlan | null>(null, 'jonmurrfit-generatedMealPlan');
     const [activeMealPlan, setActiveMealPlan] = useStickyState<GeneratedMealPlan | null>(null, 'jonmurrfit-activeMealPlan');
     const [isGeneratingMealPlan, setIsGeneratingMealPlan] = useState(false);
+    
+    const [gamificationData, setGamificationData] = useStickyState<GamificationState>({
+        xp: 0,
+        streaks: {
+            workout: { current: 0, longest: 0, lastLogDate: '' },
+            meal: { current: 0, longest: 0, lastLogDate: '' },
+            water: { current: 0, longest: 0, lastLogDate: '' },
+        },
+        earnedBadges: [],
+        challenges: getInitialChallenges(),
+    }, 'jonmurrfit-gamification');
+    
+    const levelInfo = calculateLevelInfo(gamificationData.xp);
 
     useEffect(() => {
         const lastVisitDate = localStorage.getItem('jonmurrfit-lastVisit');
@@ -147,33 +163,85 @@ const App: React.FC = () => {
         }
     }, []);
 
+    const awardXp = useCallback((amount: number) => {
+        setGamificationData(prev => ({ ...prev, xp: prev.xp + amount }));
+    }, [setGamificationData]);
+
+    const unlockBadge = useCallback((badgeId: string) => {
+        setGamificationData(prev => {
+            if (prev.earnedBadges.some(b => b.id === badgeId)) return prev;
+            const badgeToUnlock = ALL_BADGES.find(b => b.id === badgeId);
+            if (badgeToUnlock) {
+                const newBadge: EarnedBadge = {
+                    ...badgeToUnlock,
+                    earnedOn: new Date().toISOString().split('T')[0],
+                };
+                setCelebrationMilestone({
+                    id: `badge-${badgeId}`,
+                    date: newBadge.earnedOn,
+                    type: 'BADGE_UNLOCKED',
+                    title: `Badge Unlocked!`,
+                    description: newBadge.name,
+                });
+                return { ...prev, earnedBadges: [...prev.earnedBadges, newBadge] };
+            }
+            return prev;
+        });
+    }, [setGamificationData, setCelebrationMilestone]);
+
+    const updateStreak = useCallback((type: 'workout' | 'meal' | 'water') => {
+        setGamificationData(prev => {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            
+            const todayStr = today.toISOString().split('T')[0];
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            const streak = prev.streaks[type];
+            let newStreak = { ...streak };
+            let xpFromStreak = 0;
+
+            if (streak.lastLogDate !== todayStr) {
+                if (streak.lastLogDate === yesterdayStr) {
+                    newStreak.current += 1;
+                } else {
+                    newStreak.current = 1;
+                }
+                newStreak.lastLogDate = todayStr;
+                if (newStreak.current > newStreak.longest) newStreak.longest = newStreak.current;
+                if (newStreak.current >= 3) xpFromStreak += 50;
+            }
+            
+            return { ...prev, xp: prev.xp + xpFromStreak, streaks: { ...prev.streaks, [type]: newStreak }};
+        });
+    }, [setGamificationData]);
+
     const todayStr = new Date().toISOString().split('T')[0];
     const todaysWaterIntake = waterLogs.find(log => log.date === todayStr)?.intake ?? 0;
 
     const setTodaysWaterIntake = useCallback((intakeOrCallback: number | ((prev: number) => number)) => {
+        const oldIntake = waterLogs.find(log => log.date === todayStr)?.intake ?? 0;
+        
         setWaterLogs(prevLogs => {
-            const currentIntake = prevLogs.find(log => log.date === todayStr)?.intake ?? 0;
-            const newIntake = typeof intakeOrCallback === 'function' ? intakeOrCallback(currentIntake) : intakeOrCallback;
-
-            const newLogs = [...prevLogs];
-            const todayLogIndex = newLogs.findIndex(log => log.date === todayStr);
-
-            if (todayLogIndex !== -1) {
-                newLogs[todayLogIndex] = { ...newLogs[todayLogIndex], intake: newIntake };
-            } else {
-                newLogs.push({ date: todayStr, intake: newIntake });
-            }
+            const newIntake = typeof intakeOrCallback === 'function' ? intakeOrCallback(oldIntake) : intakeOrCallback;
+            const newLogs = prevLogs.filter(log => log.date !== todayStr);
+            newLogs.push({ date: todayStr, intake: newIntake });
             return newLogs;
         });
-    }, [setWaterLogs, todayStr]);
+
+        awardXp(5);
+        if(oldIntake < waterGoal && (typeof intakeOrCallback === 'function' ? intakeOrCallback(oldIntake) : intakeOrCallback) >= waterGoal) {
+            updateStreak('water');
+            unlockBadge('hydration_hero_1');
+        }
+    }, [setWaterLogs, todayStr, waterLogs, awardXp, updateStreak, unlockBadge, waterGoal]);
 
     const addMilestone = useCallback((newMilestone: Omit<Milestone, 'id' | 'date'>) => {
         const date = new Date().toISOString().split('T')[0];
         const id = `${date}-${newMilestone.type}`;
         setMilestones(prev => {
-            if (prev.some(m => m.id === id)) {
-                return prev;
-            }
+            if (prev.some(m => m.id === id)) return prev;
             const fullMilestone: Milestone = { ...newMilestone, id, date };
             setCelebrationMilestone(fullMilestone);
             return [...prev, fullMilestone].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -207,11 +275,14 @@ const App: React.FC = () => {
 
     const addMeal = useCallback((type: Meal['type'], items: FoodItem[]) => {
         if (items.length === 0) return;
-        const newMeal: Meal = {
-            id: new Date().toISOString(), type, items, timestamp: new Date()
-        };
-        setMeals(prevMeals => [...prevMeals, newMeal]);
-    }, [setMeals]);
+        const newMeal: Meal = { id: new Date().toISOString(), type, items, timestamp: new Date() };
+        setMeals(prevMeals => {
+            if(prevMeals.length === 0) unlockBadge('log_first_meal');
+            return [...prevMeals, newMeal];
+        });
+        awardXp(meals.length > 0 ? 30 : 20); // 20xp for first meal, +10 bonus for subsequent
+        updateStreak('meal');
+    }, [setMeals, awardXp, updateStreak, unlockBadge, meals.length]);
     
     const removeFoodItem = useCallback((mealId: string, itemIndex: number) => {
         setMeals(prevMeals => {
@@ -227,26 +298,12 @@ const App: React.FC = () => {
     }, [setMeals]);
     
     const addQuickAddMeal = useCallback((item: { name: string, calories: number, protein: number, carbs: number, fat: number }) => {
-        const newFoodItem: FoodItem = {
-            ...item,
-            quantity: 1,
-            unit: 'serving',
-        };
-        const newQuickAdd = {
-            name: item.name,
-            items: [newFoodItem],
-        };
-        setQuickAddMeals(prev => [...prev, newQuickAdd]);
+        const newFoodItem: FoodItem = { ...item, quantity: 1, unit: 'serving' };
+        setQuickAddMeals(prev => [...prev, { name: item.name, items: [newFoodItem] }]);
     }, [setQuickAddMeals]);
 
     const addSavedWorkout = useCallback((program: TrainingProgram, name: string, tags: string[], showAlert: boolean = true) => {
-        const newSavedWorkout: SavedWorkout = {
-            ...program,
-            id: `sw-${Date.now()}`,
-            programName: name,
-            tags,
-            isPinned: false
-        };
+        const newSavedWorkout: SavedWorkout = { ...program, id: `sw-${Date.now()}`, programName: name, tags, isPinned: false };
         setSavedWorkouts(prev => {
             if (prev.some(sw => sw.programName === newSavedWorkout.programName && JSON.stringify(sw.workouts) === JSON.stringify(newSavedWorkout.workouts))) {
                 if(showAlert) alert(`${name} is already in your library.`);
@@ -260,12 +317,8 @@ const App: React.FC = () => {
     const generatePlan = async (preferences: WorkoutPlanPreferences) => {
         setIsLoadingPlan(true);
         const plan = await generateWorkoutPlan(preferences);
-        if (plan) {
-            // This is now handled by activateGeneratedProgram
-            setTrainingProgram(plan);
-        } else {
-            alert("Failed to generate a workout plan. Please try again.");
-        }
+        if (plan) setTrainingProgram(plan);
+        else alert("Failed to generate a workout plan. Please try again.");
         setIsLoadingPlan(false);
     };
 
@@ -273,56 +326,30 @@ const App: React.FC = () => {
         setIsGeneratingMealPlan(true);
         setGeneratedMealPlan(null);
         const plan = await generateMealPlan(preferences);
-        if (plan) {
-            setGeneratedMealPlan(plan);
-        } else {
-            alert("Failed to generate a meal plan. Please try again.");
-        }
+        if (plan) setGeneratedMealPlan(plan);
+        else alert("Failed to generate a meal plan. Please try again.");
         setIsGeneratingMealPlan(false);
     };
 
     const handleActivateMealPlan = (plan: GeneratedMealPlan) => {
         setActiveMealPlan(plan);
-        const newTargets = {
-            calories: plan.dailyPlan.totalCalories,
-            protein: plan.dailyPlan.totalProtein,
-            carbs: plan.dailyPlan.totalCarbs,
-            fat: plan.dailyPlan.totalFat,
-        };
+        const newTargets = { calories: plan.dailyPlan.totalCalories, protein: plan.dailyPlan.totalProtein, carbs: plan.dailyPlan.totalCarbs, fat: plan.dailyPlan.totalFat };
         setMacroTargets({ rest: newTargets, training: newTargets });
         setGeneratedMealPlan(null);
         alert(`${plan.planName} has been activated!`);
     };
     
-    const handleDeactivateMealPlan = () => {
-        setActiveMealPlan(null);
-    };
+    const handleDeactivateMealPlan = () => setActiveMealPlan(null);
 
     const updateActiveMealPlan = useCallback((updatedPlan: GeneratedMealPlan) => {
         setActiveMealPlan(updatedPlan);
-        const newTargets = {
-            calories: updatedPlan.dailyPlan.totalCalories,
-            protein: updatedPlan.dailyPlan.totalProtein,
-            carbs: updatedPlan.dailyPlan.totalCarbs,
-            fat: updatedPlan.dailyPlan.totalFat,
-        };
+        const newTargets = { calories: updatedPlan.dailyPlan.totalCalories, protein: updatedPlan.dailyPlan.totalProtein, carbs: updatedPlan.dailyPlan.totalCarbs, fat: updatedPlan.dailyPlan.totalFat };
         setMacroTargets({ rest: newTargets, training: newTargets });
     }, [setActiveMealPlan, setMacroTargets]);
 
     const activateGeneratedProgram = useCallback((program: TrainingProgram) => {
-        const newSavedWorkout: SavedWorkout = {
-            ...program,
-            id: `sw-${Date.now()}`,
-            programName: program.programName,
-            tags: program.preferences?.goal ? [program.preferences.goal] : [],
-            isPinned: false,
-        };
-        setSavedWorkouts(prev => {
-            if (prev.some(sw => sw.programName === newSavedWorkout.programName)) {
-                return prev;
-            }
-            return [...prev, newSavedWorkout];
-        });
+        const newSavedWorkout: SavedWorkout = { ...program, id: `sw-${Date.now()}`, programName: program.programName, tags: program.preferences?.goal ? [program.preferences.goal] : [], isPinned: false };
+        setSavedWorkouts(prev => prev.some(sw => sw.programName === newSavedWorkout.programName) ? prev : [...prev, newSavedWorkout]);
         const activeProgram: TrainingProgram = { ...program };
         delete activeProgram.preferences;
         setTrainingProgram(activeProgram);
@@ -342,14 +369,7 @@ const App: React.FC = () => {
         const programToStart: TrainingProgram = JSON.parse(JSON.stringify(workout));
         programToStart.workouts.forEach(w => {
             w.completed = false;
-            w.exercises.forEach(e => {
-                e.sets.forEach(s => {
-                    s.completed = false;
-                    delete s.actualReps;
-                    delete s.actualWeight;
-                    delete s.rpe;
-                });
-            });
+            w.exercises.forEach(e => e.sets.forEach(s => { s.completed = false; delete s.actualReps; delete s.actualWeight; delete s.rpe; }));
         });
         setTrainingProgram(programToStart);
         updateSavedWorkout({ ...workout, lastPerformed: todayStr });
@@ -358,62 +378,50 @@ const App: React.FC = () => {
 
     const completeWorkout = useCallback((completedWorkout: Workout) => {
         const dateCompleted = new Date().toISOString().split('T')[0];
-        setWorkoutHistory(prev => [...prev, { ...completedWorkout, dateCompleted }]);
-    }, [setWorkoutHistory]);
+        const newHistory = [...workoutHistory, { ...completedWorkout, dateCompleted }];
+        setWorkoutHistory(newHistory);
+        awardXp(100);
+        updateStreak('workout');
+        if (newHistory.length === 1) unlockBadge('first_workout');
+        if (newHistory.length === 10) unlockBadge('workout_warrior_10');
+        if (gamificationData.streaks.workout.current === 2) unlockBadge('consistency_3_day');
+        if (gamificationData.streaks.workout.current === 6) unlockBadge('consistency_7_day');
+    }, [workoutHistory, setWorkoutHistory, awardXp, updateStreak, unlockBadge, gamificationData.streaks.workout]);
 
     const toggleFavoriteExercise = useCallback((exercise: Exercise) => {
         setFavoriteExercises(prev => {
             const isFavorite = prev.some(fav => fav.name.toLowerCase() === exercise.name.toLowerCase());
-            if (isFavorite) {
-                return prev.filter(fav => fav.name.toLowerCase() !== exercise.name.toLowerCase());
-            } else {
-                const cleanExercise: Exercise = { 
-                    id: exercise.id,
-                    name: exercise.name,
-                    category: exercise.category,
-                    isFavorite: true, 
-                    sets: exercise.sets.map(({ id, targetReps, restMinutes }) => ({ id, targetReps, restMinutes, completed: false })) 
-                };
-                return [...prev, cleanExercise];
-            }
+            if (isFavorite) return prev.filter(fav => fav.name.toLowerCase() !== exercise.name.toLowerCase());
+            const cleanExercise: Exercise = { id: exercise.id, name: exercise.name, category: exercise.category, isFavorite: true, sets: exercise.sets.map(({ id, targetReps, restMinutes }) => ({ id, targetReps, restMinutes, completed: false })) };
+            return [...prev, cleanExercise];
         });
     }, [setFavoriteExercises]);
 
     const saveDraft = useCallback((program: TrainingProgram, draftId?: string) => {
-        if (!program.programName && !program.workouts.some(w => w.exercises.length > 0)) {
-            return;
-        }
+        if (!program.programName && !program.workouts.some(w => w.exercises.length > 0)) return;
         setDrafts(prev => {
             const now = new Date();
-            const newDraft: WorkoutDraft = {
-                ...program,
-                id: draftId || `draft-${now.getTime()}`,
-                lastModified: now.toISOString(),
-            };
+            const newDraft: WorkoutDraft = { ...program, id: draftId || `draft-${now.getTime()}`, lastModified: now.toISOString() };
             const existingIndex = prev.findIndex(d => d.id === newDraft.id);
             let updatedDrafts;
             if (existingIndex > -1) {
                 updatedDrafts = prev.filter(d => d.id !== newDraft.id);
                 updatedDrafts.unshift(newDraft);
-            } else {
-                updatedDrafts = [newDraft, ...prev];
-            }
+            } else updatedDrafts = [newDraft, ...prev];
             return updatedDrafts.slice(0, 5);
         });
     }, [setDrafts]);
 
-    const deleteDraft = useCallback((draftId: string) => {
-        setDrafts(prev => prev.filter(d => d.id !== draftId));
-    }, [setDrafts]);
+    const deleteDraft = useCallback((draftId: string) => setDrafts(prev => prev.filter(d => d.id !== draftId)), [setDrafts]);
 
     const renderScreen = () => {
         switch (activeScreen) {
-            case 'home': return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} />;
+            case 'home': return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} gamificationData={gamificationData} levelInfo={levelInfo} />;
             case 'train': return <TrainScreen program={trainingProgram} setProgram={setTrainingProgram} generatePlan={generatePlan} activateGeneratedProgram={activateGeneratedProgram} isLoading={isLoadingPlan} weightUnit={weightUnit} savedWorkouts={savedWorkouts} addSavedWorkout={addSavedWorkout} updateSavedWorkout={updateSavedWorkout} deleteSavedWorkout={deleteSavedWorkout} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} completeWorkout={completeWorkout} progressionPreference={progressionPreference} setProgressionPreference={setProgressionPreference} favoriteExercises={favoriteExercises} toggleFavoriteExercise={toggleFavoriteExercise} drafts={drafts} saveDraft={saveDraft} deleteDraft={deleteDraft} />;
             case 'log': return <LogScreen meals={meals} addMeal={addMeal} removeFoodItem={removeFoodItem} quickAddMeals={quickAddMeals} addQuickAddMeal={addQuickAddMeal} onGenerateMealPlan={handleGenerateMealPlan} isGeneratingMealPlan={isGeneratingMealPlan} generatedMealPlan={generatedMealPlan} onActivateMealPlan={handleActivateMealPlan} activeMealPlan={activeMealPlan} onDeactivateMealPlan={handleDeactivateMealPlan} onUpdateActiveMealPlan={updateActiveMealPlan} user={user} currentWeightKg={currentWeightKg} weightUnit={weightUnit}/>;
-            case 'progress': return <ProgressScreen user={user} photos={photos} setPhotos={setPhotos} dailyLogs={dailyLogs} macroTargets={activeMacroTargets} weightLogs={weightLogs} setWeightLogs={setWeightLogs} currentWeightKg={currentWeightKg} setCurrentWeightKg={setCurrentWeightKg} weightGoalKg={weightGoalKg} setWeightGoalKg={setWeightGoalKg} waterIntake={todaysWaterIntake} setWaterIntake={setTodaysWaterIntake} waterGoal={waterGoal} setWaterGoal={setWaterGoal} weightUnit={weightUnit} setWeightUnit={setWeightUnit} waterUnit={waterUnit} setWaterUnit={setWaterUnit} waterLogs={waterLogs} milestones={milestones} addMilestone={addMilestone} celebrationMilestone={celebrationMilestone} setCelebrationMilestone={setCelebrationMilestone} />;
+            case 'progress': return <ProgressScreen user={user} photos={photos} setPhotos={setPhotos} dailyLogs={dailyLogs} macroTargets={activeMacroTargets} weightLogs={weightLogs} setWeightLogs={setWeightLogs} currentWeightKg={currentWeightKg} setCurrentWeightKg={setCurrentWeightKg} weightGoalKg={weightGoalKg} setWeightGoalKg={setWeightGoalKg} waterIntake={todaysWaterIntake} setWaterIntake={setTodaysWaterIntake} waterGoal={waterGoal} setWaterGoal={setWaterGoal} weightUnit={weightUnit} setWeightUnit={setWeightUnit} waterUnit={waterUnit} setWaterUnit={setWaterUnit} waterLogs={waterLogs} milestones={milestones} addMilestone={addMilestone} celebrationMilestone={celebrationMilestone} setCelebrationMilestone={setCelebrationMilestone} gamificationData={gamificationData} awardXp={awardXp} unlockBadge={unlockBadge} levelInfo={levelInfo} />;
             case 'coach': return <CoachScreen />;
-            default: return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} />;
+            default: return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} gamificationData={gamificationData} levelInfo={levelInfo} />;
         }
     };
 

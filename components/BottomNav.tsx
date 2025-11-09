@@ -1,7 +1,12 @@
-
 import React from 'react';
 import { Screen } from '../types';
-import { HomeIcon, DumbbellIcon, UtensilsIcon, ChartLineIcon, BotIcon } from './Icons';
+import {
+  HomeIconOutline, HomeIconSolid,
+  DumbbellIcon, DumbbellIconSolid,
+  UtensilsIcon, UtensilsSolidIcon,
+  ChartBarIconOutline, ChartBarIconSolid,
+  SparklesIcon, SparklesIconSolid,
+} from './Icons';
 
 interface BottomNavProps {
   activeScreen: Screen;
@@ -9,11 +14,11 @@ interface BottomNavProps {
 }
 
 const navItems = [
-  { screen: 'home' as Screen, label: 'Home', icon: HomeIcon },
-  { screen: 'train' as Screen, label: 'Train', icon: DumbbellIcon },
-  { screen: 'log' as Screen, label: 'Log', icon: UtensilsIcon },
-  { screen: 'progress' as Screen, label: 'Progress', icon: ChartLineIcon },
-  { screen: 'coach' as Screen, label: 'Coach', icon: BotIcon },
+  { screen: 'home' as Screen, label: 'Home', icon: { outline: HomeIconOutline, solid: HomeIconSolid } },
+  { screen: 'train' as Screen, label: 'Train', icon: { outline: DumbbellIcon, solid: DumbbellIconSolid } },
+  { screen: 'log' as Screen, label: 'Log', icon: { outline: UtensilsIcon, solid: UtensilsSolidIcon } },
+  { screen: 'progress' as Screen, label: 'Progress', icon: { outline: ChartBarIconOutline, solid: ChartBarIconSolid } },
+  { screen: 'coach' as Screen, label: 'Coach', icon: { outline: SparklesIcon, solid: SparklesIconSolid } },
 ];
 
 const NavItem: React.FC<{
@@ -21,17 +26,24 @@ const NavItem: React.FC<{
   isActive: boolean;
   onClick: () => void;
 }> = ({ item, isActive, onClick }) => {
-  const Icon = item.icon;
+  const Icon = isActive ? item.icon.solid : item.icon.outline;
+  
   const activeColor = 'text-green-400';
   const inactiveColor = 'text-zinc-500';
 
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center w-full h-full transition-colors duration-200"
+      className="relative flex flex-col items-center justify-center w-full h-full transition-colors duration-300 group focus:outline-none"
+      aria-label={item.label}
     >
-      <Icon className={`w-6 h-6 mb-1 ${isActive ? activeColor : inactiveColor}`} />
-      <span className={`text-xs font-medium ${isActive ? activeColor : inactiveColor}`}>
+      <div className={`absolute top-0 w-8 h-1 bg-green-400 rounded-b-full transition-all duration-300 ease-in-out ${isActive ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'}`} style={{ boxShadow: '0 0 10px #34d399' }}/>
+
+      <div className={`transition-transform duration-300 ease-in-out ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
+         <Icon className={`w-7 h-7 mb-1 transition-all duration-300 ease-in-out ${isActive ? `${activeColor} active-glow` : `${inactiveColor} group-hover:text-zinc-300`}`} />
+      </div>
+
+      <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${isActive ? activeColor : `${inactiveColor} opacity-80 group-hover:opacity-100`}`}>
         {item.label}
       </span>
     </button>
