@@ -437,6 +437,11 @@ export const gamificationService = {
     aiUsageCount?: number;
     currentLevel?: number;
     totalXP?: number;
+    macrosHit?: boolean;
+    proteinHit?: boolean;
+    caloriesHit?: boolean;
+    proteinStreak?: number;
+    calorieStreak?: number;
   }): Promise<EarnedBadge[]> {
     const earnedBadges = await this.getEarnedBadges();
     const earnedBadgeIds = new Set(earnedBadges.map(b => b.id));
@@ -455,14 +460,31 @@ export const gamificationService = {
             break;
 
           case 'Nutrition':
-            if (badge.id.includes('hydration_') || badge.id.includes('water_')) {
+            // Special badge: Macro Perfectionist (hit all macros in one day)
+            if (badge.id === 'macro_perfectionist' && context.macrosHit === true) {
+              shouldEarn = true;
+            }
+            // Special badge: Protein Pro (hit protein goal once)
+            else if (badge.id === 'protein_pro_1' && context.proteinHit === true) {
+              shouldEarn = true;
+            }
+            // Special badge: Protein Champion (7 day protein streak)
+            else if (badge.id === 'protein_champion_7' && context.proteinStreak !== undefined && context.proteinStreak >= 7) {
+              shouldEarn = true;
+            }
+            // Special badge: Calorie Control (7 day calorie streak)
+            else if (badge.id === 'calorie_control_7' && context.calorieStreak !== undefined && context.calorieStreak >= 7) {
+              shouldEarn = true;
+            }
+            // Hydration badges
+            else if (badge.id.includes('hydration_') || badge.id.includes('water_')) {
               if (context.waterDays !== undefined && context.waterDays >= badgeWithThreshold.threshold) {
                 shouldEarn = true;
               }
-            } else {
-              if (context.mealCount !== undefined && context.mealCount >= badgeWithThreshold.threshold) {
-                shouldEarn = true;
-              }
+            }
+            // General meal count badges
+            else if (context.mealCount !== undefined && context.mealCount >= badgeWithThreshold.threshold) {
+              shouldEarn = true;
             }
             break;
 

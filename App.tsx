@@ -325,12 +325,21 @@ const App: React.FC = () => {
                 
                 if (lastMacroAwardDate !== todayDate) {
                     await awardXpWithContext(50, 'Hit all macro goals', 'macro_complete', {
-                        calories: macrosToday.calories,
-                        protein: macrosToday.protein,
-                        carbs: macrosToday.carbs,
-                        fat: macrosToday.fat
+                        macrosHit: true,
+                        proteinHit: proteinMatch,
+                        caloriesHit: caloriesMatch
                     });
                     localStorage.setItem('jonmurrfit-lastMacroAward', todayDate);
+                }
+            } else if (proteinMatch) {
+                const lastProteinDate = localStorage.getItem('jonmurrfit-lastProteinCheck');
+                const todayDate = new Date().toISOString().split('T')[0];
+                
+                if (lastProteinDate !== todayDate) {
+                    await awardXpWithContext(0, 'Check protein badge', 'protein_check', {
+                        proteinHit: true
+                    });
+                    localStorage.setItem('jonmurrfit-lastProteinCheck', todayDate);
                 }
             }
         };
