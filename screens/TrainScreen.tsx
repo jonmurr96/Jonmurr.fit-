@@ -3,6 +3,9 @@ import { TrainingProgram, Workout, Exercise, WorkoutSet, WorkoutPlanPreferences,
 import { searchExercises, processWorkoutCommand, getProgressionSuggestions, getPostWorkoutRecap } from '../services/geminiService';
 import { TrashIcon, ArrowsRightLeftIcon, PlusIcon, InformationCircleIcon, ArrowLeftIcon, GripVerticalIcon, ClipboardListIcon, BookmarkIcon, MicrophoneIcon, PinIcon, ChevronRightIcon, SettingsIcon, SparklesIcon, PencilIcon, HeartIcon } from '../components/Icons';
 import { getExerciseHistory, formatHistoryForPrompt } from '../utils/progressionEngine';
+import { HeroSection } from '../components/train/HeroSection';
+import { ActionCard } from '../components/train/ActionCard';
+import { SuggestionsStrip } from '../components/train/SuggestionsStrip';
 
 
 declare global {
@@ -1442,19 +1445,52 @@ interface TrainingHomeProps {
 }
 
 const TrainingHome: React.FC<TrainingHomeProps> = ({ onGenerate, onBuild, onLoad, onFavorites, savedWorkouts, onStart }) => {
+    const handleSuggestionSelect = (label: string) => {
+        onGenerate();
+    };
+
     return (
-        <div className="p-4">
+        <div className="p-4 pb-8">
             <RecentPlans workouts={savedWorkouts} onStart={onStart} />
-            <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-white">Create a Plan</h1>
-                <p className="text-zinc-400 mt-1">Let our AI create a personalized workout plan, build your own, or load a saved routine.</p>
+            
+            <HeroSection />
+            
+            <div className="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+                <div className="md:col-span-2">
+                    <ActionCard
+                        title="Generate Plan With AI"
+                        subtitle="Smart, personalized workout in seconds"
+                        icon={<SparklesIcon className="w-full h-full" />}
+                        onClick={onGenerate}
+                        isPrimary
+                    />
+                </div>
+                
+                <ActionCard
+                    title="Build Workout Manually"
+                    subtitle="Customize every detail of your split"
+                    icon={<PencilIcon className="w-full h-full" />}
+                    onClick={onBuild}
+                />
+                
+                <ActionCard
+                    title="Load Saved Workouts"
+                    subtitle="Load your past AI or manual plans"
+                    icon={<BookmarkIcon className="w-full h-full" />}
+                    onClick={onLoad}
+                />
+                
+                <div className="md:col-span-2">
+                    <ActionCard
+                        title="Favorite Exercises"
+                        subtitle="Quick access to your go-to movements"
+                        icon={<HeartIcon className="w-full h-full" />}
+                        onClick={onFavorites}
+                    />
+                </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <GridButton title="Generate Plan With AI" icon={<SparklesIcon className="w-8 h-8"/>} onClick={onGenerate} isPrimary />
-                <GridButton title="Build Workout Manually" icon={<PencilIcon className="w-8 h-8"/>} onClick={onBuild} />
-                <GridButton title="Load Saved Workouts" icon={<BookmarkIcon className="w-8 h-8"/>} onClick={onLoad} />
-                <GridButton title="Favorite Exercises" icon={<HeartIcon className="w-8 h-8"/>} onClick={onFavorites} />
-            </div>
+            
+            <SuggestionsStrip onSelect={handleSuggestionSelect} />
         </div>
     );
 }
