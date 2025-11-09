@@ -26,11 +26,13 @@ export const mealPlanService = {
   },
 
   async saveMealPlan(mealPlan: GeneratedMealPlan, isActive: boolean = false): Promise<void> {
-    await supabase
-      .from('generated_meal_plans')
-      .update({ is_active: false })
-      .eq('user_id', USER_ID)
-      .eq('is_active', true);
+    if (isActive) {
+      await supabase
+        .from('generated_meal_plans')
+        .update({ is_active: false })
+        .eq('user_id', USER_ID)
+        .eq('is_active', true);
+    }
 
     const { error } = await supabase
       .from('generated_meal_plans')

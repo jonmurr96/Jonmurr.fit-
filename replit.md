@@ -12,6 +12,12 @@ This is an AI-powered fitness tracking application built with React, TypeScript,
 - **Proxy Configuration**: Added `allowedHosts: true` to Vite config for Replit's iframe proxy
 - **Deployment**: Configured autoscale deployment with Vite preview server
 - **Dependencies**: All npm packages installed successfully
+- **Supabase Backend**: Added complete database backend with 23 tables
+  - Installed @supabase/supabase-js client library
+  - Created comprehensive database schema (supabase/schema.sql)
+  - Built 6 database service layers for all app features
+  - Configured environment variables (SUPABASE_URL, SUPABASE_ANON_KEY)
+  - Added detailed setup documentation (SUPABASE_SETUP.md)
 
 ## Project Architecture
 
@@ -27,12 +33,17 @@ This is an AI-powered fitness tracking application built with React, TypeScript,
 - `App.tsx` - Main application component with state management
 - `vite.config.ts` - Vite configuration (port 5000, host 0.0.0.0)
 - `services/geminiService.ts` - Gemini AI integration for workouts and meals
+- `services/supabaseClient.ts` - Supabase client configuration
+- `services/database/` - Database service layers (user, meal, workout, progress, gamification, mealPlan)
+- `supabase/schema.sql` - Complete database schema (23 tables)
 - `components/` - Reusable UI components
 - `screens/` - Main application screens (Home, Train, Log, Progress, Coach)
 
 ### Environment Variables
 - `GEMINI_API_KEY` - Required for AI features (get from https://aistudio.google.com/app/apikey)
 - `WGER_API_KEY` - Required for exercise database (get from https://wger.de/en/software/api)
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_ANON_KEY` - Your Supabase anonymous/public API key
 
 ## Architecture Notes
 
