@@ -440,7 +440,7 @@ const XPBar: React.FC<{
         }}
     >
         <div className="flex justify-between items-center mb-2 text-sm">
-            <p className="font-bold text-green-400">{levelInfo.level}</p>
+            <p className="font-bold text-green-400">{levelInfo.level}: LVL {levelInfo.numericLevel}</p>
             <p className="font-mono text-zinc-400">
                 <span className="font-bold text-white">{gamificationData.xp}</span> / {isFinite(levelInfo.xpForNext) ? levelInfo.xpForNext : 'MAX'} XP
             </p>
