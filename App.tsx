@@ -211,14 +211,7 @@ const App: React.FC = () => {
         initializeFromDatabase();
     }, []);
 
-    useEffect(() => {
-        const lastVisitDate = localStorage.getItem('jonmurrfit-lastVisit');
-        const todayDate = new Date().toISOString().split('T')[0];
-        if (lastVisitDate !== todayDate) {
-            setMeals([]);
-            localStorage.setItem('jonmurrfit-lastVisit', todayDate);
-        }
-    }, []);
+    // Note: Date-based meal clearing removed - now handled by Supabase getMealsForDate() filter
 
     const todayStr = new Date().toISOString().split('T')[0];
     const todaysWaterIntake = waterLogs.find(log => log.date === todayStr)?.intake ?? 0;
@@ -236,7 +229,6 @@ const App: React.FC = () => {
             });
 
             // Count water days EXCLUDING today, then add today if it meets goal
-            const todayStr = new Date().toISOString().split('T')[0];
             const waterDaysExcludingToday = waterLogs.filter(log => 
                 log.date !== todayStr && log.intake >= waterGoal
             ).length;
