@@ -7,7 +7,31 @@ This is an AI-powered fitness tracking application built with React, TypeScript,
 
 ## Recent Changes (Nov 9, 2025)
 
-### Database Setup & Bug Fixes (Latest - Nov 9, 2025)
+### Tiered Badge System Implementation (Latest - Nov 9, 2025 @ 4:09 PM)
+- **🏅 Tiered Badge Progression**: Implemented Bronze → Silver → Gold → Diamond tier system
+  - Consolidated 45+ individual badges into 20 tiered families
+  - Each badge progresses through 4 tiers with increasing thresholds
+  - Examples: Training Beast (5/25/100/300 workouts), Mindful Eater (10/50/150/365 meals)
+  - Boolean badges (one-time unlocks) remain single-tier (Bronze only)
+- **🎨 Badge Tier UI**: Enhanced gamification screen with tier display
+  - Colored tier medals in top-right corner (B/S/G/D letters)
+  - Progress bars showing % to next tier
+  - Tier colors: Bronze (#cd7f32), Silver (#c0c0c0), Gold (#ffd700), Diamond (#b9f2ff)
+- **🎉 Badge Upgrade Celebrations**: Created BadgeUpgradeModal component
+  - Shows tier-to-tier transition (Bronze → Silver, etc.)
+  - Displays XP rewards for tier upgrades (25/50/100/200 XP)
+  - Animated confetti and tier color transitions
+- **💾 Database Migration Required**: `supabase/migration_badge_tiers.sql`
+  - Renames `earned_badges` → `badge_progress`
+  - Adds columns: current_tier, progress_value, tier_progress_pct, last_tier_awarded_at
+  - Backfills existing badges to Bronze tier
+  - **📝 User Action Required**: Apply this migration to Supabase before testing
+- **🐛 Fixed Critical Boolean Badge Bug**: Boolean badges no longer auto-grant
+  - Updated getMetricValue() to require explicit context flags
+  - Badges like early_adopter, night_owl, etc. now properly gated
+- **✅ Architect Approved**: Full implementation reviewed and passed
+
+### Database Setup & Bug Fixes (Nov 9, 2025 - Morning)
 - **🔧 Fixed Meal Logging Bug**: Identified and resolved critical issue where meals weren't saving
   - Root cause: Database tables didn't exist in Supabase (schema not applied)
   - Fixed database upsert conflict: Added `onConflict: 'user_id,date'` to daily_logs upsert

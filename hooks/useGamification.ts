@@ -15,6 +15,12 @@ interface BadgeUnlockEvent {
   badges: EarnedBadge[];
 }
 
+interface BadgeUpgradeEvent {
+  badge: EarnedBadge;
+  fromTier: 'bronze' | 'silver' | 'gold' | 'diamond';
+  toTier: 'bronze' | 'silver' | 'gold' | 'diamond';
+}
+
 interface XPToastEvent {
   amount: number;
   reason: string;
@@ -23,6 +29,7 @@ interface XPToastEvent {
 export interface GamificationFeedback {
   levelUp?: LevelUpEvent;
   badgeUnlock?: BadgeUnlockEvent;
+  badgeUpgrade?: BadgeUpgradeEvent;
   xpToast?: XPToastEvent;
 }
 
@@ -116,27 +123,58 @@ export const useGamification = () => {
         }]);
       }
 
-      // Check for new badges if context provided
+      // Check for new badges and upgrades if context provided
       if (badgeContext) {
-        // Fetch fresh streaks to avoid stale closure data
+        // Fetch fresh streaks and existing badges to avoid stale closure data
         const freshState = await gamificationService.getGamificationState();
+        const existingBadgeMap = new Map(freshState.earnedBadges.map(b => [b.id, b]));
         
-        const newBadges = await gamificationService.checkAndAwardBadges({
+        const badgeResults = await gamificationService.checkAndAwardBadges({
           ...badgeContext,
           streaks: freshState.streaks,
           currentLevel: result.leveledUp ? result.newLevel : currentLevelInfo.numericLevel,
           totalXP: result.newXP,
         });
 
-        if (newBadges.length > 0) {
+        if (badgeResults.length > 0) {
+          // Separate new badges from tier upgrades
+          const newBadges: EarnedBadge[] = [];
+          const upgradedBadges: { badge: EarnedBadge; fromTier: any; toTier: any; }[] = [];
+          
+          badgeResults.forEach(badge => {
+            const existing = existingBadgeMap.get(badge.id);
+            if (!existing) {
+              // Brand new badge
+              newBadges.push(badge);
+            } else if (existing.currentTier !== badge.currentTier) {
+              // Tier upgrade
+              upgradedBadges.push({
+                badge,
+                fromTier: existing.currentTier,
+                toTier: badge.currentTier,
+              });
+            }
+          });
+
+          // Update state with all badges
           setGamificationData(prev => ({
             ...prev,
-            earnedBadges: [...prev.earnedBadges, ...newBadges]
+            earnedBadges: [...prev.earnedBadges.filter(b => !badgeResults.find(nb => nb.id === b.id)), ...badgeResults]
           }));
 
-          setFeedbackQueue(prev => [...prev, {
-            badgeUnlock: { badges: newBadges }
-          }]);
+          // Queue feedback for new badges
+          if (newBadges.length > 0) {
+            setFeedbackQueue(prev => [...prev, {
+              badgeUnlock: { badges: newBadges }
+            }]);
+          }
+
+          // Queue feedback for tier upgrades
+          upgradedBadges.forEach(({ badge, fromTier, toTier }) => {
+            setFeedbackQueue(prev => [...prev, {
+              badgeUpgrade: { badge, fromTier, toTier }
+            }]);
+          });
         }
       }
     } catch (error) {

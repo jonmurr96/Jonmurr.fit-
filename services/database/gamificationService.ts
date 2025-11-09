@@ -462,6 +462,86 @@ export const gamificationService = {
     return newChallenges;
   },
 
+  // Helper: Get metric value for a badge based on its ID and context
+  getMetricValue(badgeId: string, context: any): number {
+    switch (badgeId) {
+      // Workout badges
+      case 'training_beast':
+      case 'first_workout':
+        return context.workoutCount || 0;
+      
+      // Nutrition - meal logging
+      case 'mindful_eater':
+        return context.mealCount || 0;
+      
+      // Nutrition - protein tracking  
+      case 'protein_pro':
+        return context.proteinHit ? (context.proteinStreak || 1) : 0;
+      
+      // Nutrition - macro tracking
+      case 'macro_perfectionist':
+        return context.macrosHit ? 1 : 0;
+      
+      // Nutrition - calorie control
+      case 'calorie_control':
+        return context.caloriesHit ? (context.calorieStreak || 1) : 0;
+      
+      // Hydration
+      case 'hydration_hero':
+        return context.waterDays || 0;
+      
+      // Consistency (streak)
+      case 'consistency_champion':
+        return context.streaks ? Math.max(
+          context.streaks.workout.current,
+          context.streaks.meal.current,
+          context.streaks.water.current
+        ) : 0;
+      
+      // Progress tracking
+      case 'progress_tracker':
+      case 'weight_logger':
+        return context.weightLogs || 0;
+      
+      // AI usage
+      case 'ai_master':
+        return context.aiUsageCount || 0;
+      
+      // Challenges
+      case 'challenge_legend':
+        return context.challengesCompleted || 0;
+      
+      // Milestones (level-based, boolean)
+      case 'level_10':
+        return (context.currentLevel || 0) >= 10 ? 1 : 0;
+      case 'level_25':
+        return (context.currentLevel || 0) >= 25 ? 1 : 0;
+      case 'level_40':
+        return (context.currentLevel || 0) >= 40 ? 1 : 0;
+      case 'level_60':
+        return (context.currentLevel || 0) >= 60 ? 1 : 0;
+      case 'level_80':
+        return (context.currentLevel || 0) >= 80 ? 1 : 0;
+      case 'level_100':
+        return (context.currentLevel || 0) >= 100 ? 1 : 0;
+      
+      // Special badges (boolean - require explicit context flags)
+      case 'early_adopter':
+        return context.earlyAdopter === true ? 1 : 0;
+      case 'first_workout':
+        return context.firstWorkout === true ? 1 : 0;
+      case 'early_bird':
+        return context.earlyBird === true ? 1 : 0;
+      case 'night_owl':
+        return context.nightOwl === true ? 1 : 0;
+      case 'comeback_kid':
+        return context.comebackKid === true ? 1 : 0;
+      
+      default:
+        return 0;
+    }
+  },
+
   async checkAndAwardBadges(context: {
     workoutCount?: number;
     mealCount?: number;
@@ -477,119 +557,104 @@ export const gamificationService = {
     caloriesHit?: boolean;
     proteinStreak?: number;
     calorieStreak?: number;
+    // Boolean badge triggers (must be explicitly set to true)
+    earlyAdopter?: boolean;
+    firstWorkout?: boolean;
+    earlyBird?: boolean;
+    nightOwl?: boolean;
+    comebackKid?: boolean;
   }): Promise<EarnedBadge[]> {
-    const earnedBadges = await this.getEarnedBadges();
-    const earnedBadgeIds = new Set(earnedBadges.map(b => b.id));
-    const newBadges: EarnedBadge[] = [];
+    const existingBadges = await this.getEarnedBadges();
+    const badgeMap = new Map(existingBadges.map(b => [b.id, b]));
+    const newAndUpgradedBadges: EarnedBadge[] = [];
 
-    for (const badge of ALL_BADGES) {
-      if (!earnedBadgeIds.has(badge.id)) {
-        let shouldEarn = false;
-        const badgeWithThreshold = badge as any;
+    for (const badgeDef of ALL_BADGES) {
+      const metricValue = this.getMetricValue(badgeDef.id, context);
+      const existingBadge = badgeMap.get(badgeDef.id) as EarnedBadge | undefined;
+      
+      // Skip if no progress on this metric
+      if (metricValue === 0 && !existingBadge) continue;
 
-        switch (badge.category) {
-          case 'Workout':
-            if (context.workoutCount !== undefined && context.workoutCount >= badgeWithThreshold.threshold) {
-              shouldEarn = true;
-            }
-            break;
-
-          case 'Nutrition':
-            // Special badge: Macro Perfectionist (hit all macros in one day)
-            if (badge.id === 'macro_perfectionist' && context.macrosHit === true) {
-              shouldEarn = true;
-            }
-            // Special badge: Protein Pro (hit protein goal once)
-            else if (badge.id === 'protein_pro_1' && context.proteinHit === true) {
-              shouldEarn = true;
-            }
-            // Special badge: Protein Champion (7 day protein streak)
-            else if (badge.id === 'protein_champion_7' && context.proteinStreak !== undefined && context.proteinStreak >= 7) {
-              shouldEarn = true;
-            }
-            // Special badge: Calorie Control (7 day calorie streak)
-            else if (badge.id === 'calorie_control_7' && context.calorieStreak !== undefined && context.calorieStreak >= 7) {
-              shouldEarn = true;
-            }
-            // Hydration badges
-            else if (badge.id.includes('hydration_') || badge.id.includes('water_')) {
-              if (context.waterDays !== undefined && context.waterDays >= badgeWithThreshold.threshold) {
-                shouldEarn = true;
-              }
-            }
-            // General meal count badges
-            else if (context.mealCount !== undefined && context.mealCount >= badgeWithThreshold.threshold) {
-              shouldEarn = true;
-            }
-            break;
-
-          case 'Consistency':
-            if (context.streaks) {
-              if (badge.id.includes('workout_streak') && context.streaks.workout.current >= badgeWithThreshold.threshold) {
-                shouldEarn = true;
-              } else if (badge.id.includes('meal_streak') && context.streaks.meal.current >= badgeWithThreshold.threshold) {
-                shouldEarn = true;
-              } else if (badge.id.includes('water_streak') && context.streaks.water.current >= badgeWithThreshold.threshold) {
-                shouldEarn = true;
-              } else {
-                const maxStreak = Math.max(context.streaks.workout.current, context.streaks.meal.current, context.streaks.water.current);
-                if (maxStreak >= badgeWithThreshold.threshold) shouldEarn = true;
-              }
-            }
-            break;
-
-          case 'Progress':
-            if (context.weightLogs !== undefined && context.weightLogs >= badgeWithThreshold.threshold) {
-              shouldEarn = true;
-            }
-            break;
-
-          case 'AI':
-            if (context.aiUsageCount !== undefined && context.aiUsageCount >= badgeWithThreshold.threshold) {
-              shouldEarn = true;
-            }
-            break;
-
-          case 'Challenges':
-            if (context.challengesCompleted !== undefined && context.challengesCompleted >= badgeWithThreshold.threshold) {
-              shouldEarn = true;
-            }
-            break;
-
-          case 'Milestones':
-            if (context.currentLevel !== undefined && context.currentLevel >= badgeWithThreshold.levelRequired) {
-              shouldEarn = true;
-            } else if (context.totalXP !== undefined && context.totalXP >= badgeWithThreshold.xpRequired) {
-              shouldEarn = true;
-            }
-            break;
-
-          case 'Special':
-            // Special badges require specific triggers or manual granting
-            // These are typically awarded through special events or one-time actions
-            if (badge.id === 'early_adopter') {
-              shouldEarn = true;
-            }
-            // Other special badges (like 'perfectionist') require custom tracking
-            // and will be handled by specialized event triggers
-            break;
+      // Find highest tier achieved
+      let highestTierAchieved = null;
+      for (let i = badgeDef.tiers.length - 1; i >= 0; i--) {
+        if (metricValue >= badgeDef.tiers[i].threshold) {
+          highestTierAchieved = badgeDef.tiers[i];
+          break;
         }
+      }
 
-        if (shouldEarn) {
-          const earnedBadge: EarnedBadge = {
-            id: badge.id,
-            name: badge.name,
-            description: badge.description,
-            category: badge.category,
-            icon: badge.icon,
-            earnedOn: new Date().toISOString().split('T')[0],
+      if (!highestTierAchieved) continue; // Haven't hit Bronze yet
+
+      // NEW BADGE: User hasn't earned this badge yet
+      if (!existingBadge) {
+        const tierIndex = badgeDef.tiers.indexOf(highestTierAchieved);
+        const nextTier = tierIndex < badgeDef.tiers.length - 1 ? badgeDef.tiers[tierIndex + 1] : null;
+        const progressPct = nextTier 
+          ? Math.min(100, ((metricValue - highestTierAchieved.threshold) / (nextTier.threshold - highestTierAchieved.threshold)) * 100)
+          : 100;
+
+        const newBadge: EarnedBadge = {
+          id: badgeDef.id,
+          name: badgeDef.name,
+          description: badgeDef.description,
+          category: badgeDef.category,
+          icon: badgeDef.icon,
+          tiers: badgeDef.tiers,
+          metricType: badgeDef.metricType,
+          earnedOn: new Date().toISOString().split('T')[0],
+          currentTier: highestTierAchieved.tier,
+          progressValue: metricValue,
+          tierProgressPct: progressPct,
+          lastTierAwardedAt: new Date().toISOString().split('T')[0],
+        };
+        
+        await this.earnBadge(newBadge);
+        newAndUpgradedBadges.push(newBadge);
+      }
+      // TIER UPGRADE: User has this badge, check if they upgraded tier
+      else if (existingBadge) {
+        const currentTierIndex = badgeDef.tiers.findIndex(t => t.tier === existingBadge.currentTier);
+        const highestTierIndex = badgeDef.tiers.indexOf(highestTierAchieved);
+        
+        // User upgraded to a higher tier!
+        if (highestTierIndex > currentTierIndex) {
+          const nextTier = highestTierIndex < badgeDef.tiers.length - 1 ? badgeDef.tiers[highestTierIndex + 1] : null;
+          const progressPct = nextTier 
+            ? Math.min(100, ((metricValue - highestTierAchieved.threshold) / (nextTier.threshold - highestTierAchieved.threshold)) * 100)
+            : 100;
+
+          await this.updateBadgeProgress(badgeDef.id, highestTierAchieved.tier, metricValue, progressPct);
+          
+          const upgradedBadge: EarnedBadge = {
+            id: existingBadge.id,
+            name: existingBadge.name,
+            description: existingBadge.description,
+            category: existingBadge.category,
+            icon: existingBadge.icon,
+            tiers: existingBadge.tiers,
+            metricType: existingBadge.metricType,
+            earnedOn: existingBadge.earnedOn,
+            currentTier: highestTierAchieved.tier,
+            progressValue: metricValue,
+            tierProgressPct: progressPct,
+            lastTierAwardedAt: new Date().toISOString().split('T')[0],
           };
-          await this.earnBadge(earnedBadge);
-          newBadges.push(earnedBadge);
+          
+          newAndUpgradedBadges.push(upgradedBadge);
+        }
+        // No tier upgrade, but update progress value
+        else if (metricValue !== existingBadge.progressValue) {
+          const nextTier = currentTierIndex < badgeDef.tiers.length - 1 ? badgeDef.tiers[currentTierIndex + 1] : null;
+          const progressPct = nextTier 
+            ? Math.min(100, ((metricValue - badgeDef.tiers[currentTierIndex].threshold) / (nextTier.threshold - badgeDef.tiers[currentTierIndex].threshold)) * 100)
+            : 100;
+
+          await this.updateBadgeProgress(badgeDef.id, existingBadge.currentTier, metricValue, progressPct);
         }
       }
     }
 
-    return newBadges;
+    return newAndUpgradedBadges;
   },
 };

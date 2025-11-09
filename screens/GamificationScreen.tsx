@@ -147,16 +147,33 @@ export const GamificationScreen: React.FC<GamificationScreenProps> = ({
               <h3 className="text-lg font-bold mb-3 text-green-400">{category}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {badges.map((badge) => {
-                  const isEarned = earnedBadgeIds.has(badge.id);
+                  const earnedBadge = gamificationData.earnedBadges.find(b => b.id === badge.id);
+                  const isEarned = !!earnedBadge;
+                  const tierColors = {
+                    bronze: '#cd7f32',
+                    silver: '#c0c0c0',
+                    gold: '#ffd700',
+                    diamond: '#b9f2ff',
+                  };
+                  const tierColor = earnedBadge ? tierColors[earnedBadge.currentTier] : undefined;
+                  
                   return (
                     <div
                       key={badge.id}
-                      className={`rounded-lg p-3 border transition-all ${
+                      className={`rounded-lg p-3 border transition-all relative ${
                         isEarned
                           ? 'bg-gradient-to-br from-yellow-900 to-yellow-950 border-yellow-700'
                           : 'bg-zinc-800 border-zinc-700 opacity-40'
                       }`}
                     >
+                      {isEarned && earnedBadge && (
+                        <div 
+                          className="absolute top-1 right-1 px-2 py-0.5 rounded text-xs font-bold text-white"
+                          style={{ backgroundColor: tierColor }}
+                        >
+                          {earnedBadge.currentTier[0].toUpperCase()}
+                        </div>
+                      )}
                       <div className="text-3xl mb-2 text-center">{badge.icon}</div>
                       <div className={`text-sm font-bold text-center mb-1 ${isEarned ? 'text-yellow-300' : 'text-zinc-500'}`}>
                         {badge.name}
@@ -164,6 +181,19 @@ export const GamificationScreen: React.FC<GamificationScreenProps> = ({
                       <div className={`text-xs text-center ${isEarned ? 'text-yellow-200' : 'text-zinc-600'}`}>
                         {badge.description}
                       </div>
+                      {isEarned && earnedBadge && earnedBadge.tierProgressPct < 100 && (
+                        <div className="mt-2">
+                          <div className="w-full bg-zinc-700 rounded-full h-1.5">
+                            <div 
+                              className="h-1.5 rounded-full transition-all"
+                              style={{ width: `${earnedBadge.tierProgressPct}%`, backgroundColor: tierColor }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-center text-zinc-400 mt-1">
+                            {Math.round(earnedBadge.tierProgressPct)}% to next tier
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -3,6 +3,7 @@ import { GamificationFeedback as FeedbackType } from '../../hooks/useGamificatio
 import { XPToast } from './XPToast';
 import { LevelUpModal } from './LevelUpModal';
 import { BadgeUnlockModal } from './BadgeUnlockModal';
+import BadgeUpgradeModal from '../BadgeUpgradeModal';
 
 interface GamificationFeedbackProps {
   feedback: FeedbackType;
@@ -37,6 +38,17 @@ export const GamificationFeedback: React.FC<GamificationFeedbackProps> = ({ feed
     return (
       <BadgeUnlockModal
         badges={feedback.badgeUnlock.badges}
+        onClose={onDismiss}
+      />
+    );
+  }
+
+  if (feedback.badgeUpgrade) {
+    return (
+      <BadgeUpgradeModal
+        badge={feedback.badgeUpgrade.badge}
+        fromTier={feedback.badgeUpgrade.fromTier}
+        toTier={feedback.badgeUpgrade.toTier}
         onClose={onDismiss}
       />
     );
