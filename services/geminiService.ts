@@ -4,7 +4,7 @@ import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { AiMessage, FoodItem, TrainingProgram, Exercise, WorkoutPlanPreferences, SavedWorkout, ProgressionSuggestion, ProgressionPreference, Workout, NutritionPlanPreferences, GeneratedMealPlan } from "../types";
 
 const API_KEY = process.env.API_KEY;
-const WGER_API_KEY = '188d282518d7945afb60f73be1537a3b3c9bd691';
+const WGER_API_KEY = process.env.WGER_API_KEY || '';
 
 if (!API_KEY) {
   throw new Error("API_KEY environment variable not set");
