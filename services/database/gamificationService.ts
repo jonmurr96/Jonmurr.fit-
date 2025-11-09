@@ -123,29 +123,41 @@ export const gamificationService = {
 
   async getEarnedBadges(): Promise<EarnedBadge[]> {
     const { data, error } = await supabase
-      .from('earned_badges')
+      .from('badge_progress')
       .select('*')
       .eq('user_id', USER_ID)
       .order('earned_on', { ascending: false });
 
     if (error) {
-      console.error('Error fetching earned badges:', error);
+      console.error('Error fetching badge progress:', error);
       return [];
     }
 
-    return (data || []).map((badge: any) => ({
-      id: badge.badge_id,
-      name: badge.name,
-      description: badge.description,
-      category: badge.category,
-      icon: badge.icon,
-      earnedOn: badge.earned_on,
-    }));
+    // Enrich database badge progress with tier definitions from ALL_BADGES
+    const { ALL_BADGES } = await import('../../utils/gamification');
+    
+    return (data || []).map((badge: any) => {
+      const badgeDefinition = ALL_BADGES.find(b => b.id === badge.badge_id);
+      return {
+        id: badge.badge_id,
+        name: badge.name,
+        description: badge.description,
+        category: badge.category,
+        icon: badge.icon,
+        earnedOn: badge.earned_on,
+        currentTier: badge.current_tier || 'bronze',
+        progressValue: badge.progress_value || 0,
+        tierProgressPct: badge.tier_progress_pct || 0,
+        lastTierAwardedAt: badge.last_tier_awarded_at || badge.earned_on,
+        tiers: badgeDefinition?.tiers || [],
+        metricType: badgeDefinition?.metricType || 'count',
+      };
+    });
   },
 
   async earnBadge(badge: EarnedBadge): Promise<void> {
     const { error } = await supabase
-      .from('earned_badges')
+      .from('badge_progress')
       .insert({
         user_id: USER_ID,
         badge_id: badge.id,
@@ -154,10 +166,33 @@ export const gamificationService = {
         category: badge.category,
         icon: badge.icon,
         earned_on: badge.earnedOn,
+        current_tier: badge.currentTier || 'bronze',
+        progress_value: badge.progressValue || 1,
+        tier_progress_pct: badge.tierProgressPct || 0,
+        last_tier_awarded_at: badge.lastTierAwardedAt || badge.earnedOn,
       });
 
     if (error) {
       console.error('Error earning badge:', error);
+      throw error;
+    }
+  },
+  
+  async updateBadgeProgress(badgeId: string, currentTier: string, progressValue: number, tierProgressPct: number): Promise<void> {
+    const { error } = await supabase
+      .from('badge_progress')
+      .update({
+        current_tier: currentTier,
+        progress_value: progressValue,
+        tier_progress_pct: tierProgressPct,
+        last_tier_awarded_at: new Date().toISOString().split('T')[0],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', USER_ID)
+      .eq('badge_id', badgeId);
+
+    if (error) {
+      console.error('Error updating badge progress:', error);
       throw error;
     }
   },

@@ -311,16 +311,31 @@ export interface StreakData {
 
 export type BadgeCategory = 'Workout' | 'Nutrition' | 'Consistency' | 'Special' | 'Progress' | 'AI' | 'Challenges' | 'Milestones';
 
+export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'diamond';
+
+export interface TierDefinition {
+  tier: BadgeTier;
+  threshold: number; // Number required to unlock this tier
+  xpReward: number; // Bonus XP for reaching this tier
+  label: string; // "Bronze", "Silver", etc.
+}
+
 export interface Badge {
   id: string;
   name: string;
   description: string;
   category: BadgeCategory;
   icon: string; // emoji
+  tiers: TierDefinition[]; // 4 tiers: Bronze → Diamond
+  metricType: 'count' | 'streak' | 'boolean'; // How to track progress
 }
 
 export interface EarnedBadge extends Badge {
-  earnedOn: string; // "YYYY-MM-DD"
+  earnedOn: string; // "YYYY-MM-DD" - when Bronze was first earned
+  currentTier: BadgeTier; // Current tier level
+  progressValue: number; // Raw count toward next tier
+  tierProgressPct: number; // Percentage progress to next tier (0-100)
+  lastTierAwardedAt: string; // "YYYY-MM-DD" - when current tier was earned
 }
 
 export type ChallengeType = 

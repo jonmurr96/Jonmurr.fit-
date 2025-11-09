@@ -1,5 +1,5 @@
 
-import { Level, LevelInfo, Badge, Challenge, ChallengeType, GamificationState, EarnedBadge } from '../types';
+import { Level, LevelInfo, Badge, Challenge, ChallengeType, GamificationState, EarnedBadge, TierDefinition, BadgeTier } from '../types';
 
 // 🎮 NEW 100-LEVEL SYSTEM WITH RANK TITLES
 export type RankTitle = 'Newbie' | 'Rookie' | 'Unit' | 'Gym Rat' | 'Gym Addict' | 'Bodybuilder';
@@ -145,69 +145,66 @@ export const calculateLevelInfo = (xp: number): LevelInfo => {
   };
 };
 
-// 🏅 COMPREHENSIVE BADGE SYSTEM (30+ badges)
+// 🏅 TIER DEFINITIONS HELPER
+const createTiers = (bronze: number, silver: number, gold: number, diamond: number): TierDefinition[] => [
+  { tier: 'bronze', threshold: bronze, xpReward: 25, label: 'Bronze' },
+  { tier: 'silver', threshold: silver, xpReward: 50, label: 'Silver' },
+  { tier: 'gold', threshold: gold, xpReward: 100, label: 'Gold' },
+  { tier: 'diamond', threshold: diamond, xpReward: 200, label: 'Diamond' },
+];
+
+// Boolean badges (one-time unlocks) get a single Bronze tier
+const createBooleanTier = (): TierDefinition[] => [
+  { tier: 'bronze', threshold: 1, xpReward: 50, label: 'Bronze' },
+];
+
+// 🏅 COMPREHENSIVE TIERED BADGE SYSTEM (~20 consolidated badge families)
 export const ALL_BADGES: Badge[] = [
   // 🏋️ WORKOUT BADGES
-  { id: 'first_workout', name: 'First Workout', description: 'Completed your first workout. The journey begins!', category: 'Workout', icon: '🎉' },
-  { id: 'workout_warrior_10', name: 'Workout Warrior', description: 'Completed 10 workouts.', category: 'Workout', icon: '💪' },
-  { id: 'workout_veteran_25', name: 'Workout Veteran', description: 'Completed 25 workouts.', category: 'Workout', icon: '🏋️' },
-  { id: 'workout_master_50', name: 'Workout Master', description: 'Completed 50 workouts.', category: 'Workout', icon: '⚡' },
-  { id: 'workout_legend_100', name: 'Workout Legend', description: 'Completed 100 workouts!', category: 'Workout', icon: '👑' },
-  { id: 'early_bird', name: 'Early Bird', description: 'Completed a workout before 7 AM.', category: 'Workout', icon: '🌅' },
-  { id: 'night_owl', name: 'Night Owl', description: 'Completed a workout after 9 PM.', category: 'Workout', icon: '🌙' },
-  { id: 'weekend_warrior', name: 'Weekend Warrior', description: 'Completed workouts on both Saturday and Sunday.', category: 'Workout', icon: '🎯' },
+  { id: 'training_beast', name: 'Training Beast', description: 'Complete workouts to build strength and discipline', category: 'Workout', icon: '💪', tiers: createTiers(5, 25, 100, 300), metricType: 'count' },
+  { id: 'first_workout', name: 'First Steps', description: 'Completed your first workout - the journey begins!', category: 'Workout', icon: '🎉', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'early_bird', name: 'Early Bird', description: 'Completed a workout before 7 AM', category: 'Workout', icon: '🌅', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'night_owl', name: 'Night Owl', description: 'Completed a workout after 9 PM', category: 'Workout', icon: '🌙', tiers: createBooleanTier(), metricType: 'boolean' },
   
-  // 🥗 NUTRITION BADGES
-  { id: 'log_first_meal', name: 'Mindful Eater', description: 'Logged your first meal.', category: 'Nutrition', icon: '🥗' },
-  { id: 'meal_tracker_50', name: 'Meal Tracker', description: 'Logged 50 meals.', category: 'Nutrition', icon: '📝' },
-  { id: 'meal_master_100', name: 'Meal Master', description: 'Logged 100 meals.', category: 'Nutrition', icon: '🍽️' },
-  { id: 'protein_pro_1', name: 'Protein Pro', description: 'Hit your protein goal for the first time.', category: 'Nutrition', icon: '🍗' },
-  { id: 'protein_champion_7', name: 'Protein Champion', description: 'Hit protein goal 7 days in a row.', category: 'Nutrition', icon: '🥩' },
-  { id: 'macro_perfectionist', name: 'Macro Perfectionist', description: 'Hit all macro goals in a single day.', category: 'Nutrition', icon: '🎯' },
-  { id: 'calorie_control_7', name: 'Calorie Control', description: 'Stayed within calorie goal for 7 days.', category: 'Nutrition', icon: '⚖️' },
-  { id: 'clean_eater', name: 'Clean Eater', description: 'Logged 5 days of whole food meals.', category: 'Nutrition', icon: '🥦' },
+  // 🥗 NUTRITION - MEAL LOGGING BADGES
+  { id: 'mindful_eater', name: 'Mindful Eater', description: 'Track your nutrition journey meal by meal', category: 'Nutrition', icon: '🥗', tiers: createTiers(10, 50, 150, 365), metricType: 'count' },
+  
+  // 🍗 NUTRITION - PROTEIN TRACKING
+  { id: 'protein_pro', name: 'Protein Pro', description: 'Hit your daily protein goals consistently', category: 'Nutrition', icon: '🍗', tiers: createTiers(1, 7, 30, 90), metricType: 'count' },
+  
+  // 🎯 NUTRITION - MACRO TRACKING
+  { id: 'macro_perfectionist', name: 'Macro Perfectionist', description: 'Achieve perfect macro balance day after day', category: 'Nutrition', icon: '🎯', tiers: createTiers(1, 7, 30, 90), metricType: 'count' },
+  
+  // ⚖️ NUTRITION - CALORIE CONTROL
+  { id: 'calorie_control', name: 'Calorie Master', description: 'Stay within your calorie targets consistently', category: 'Nutrition', icon: '⚖️', tiers: createTiers(1, 7, 30, 90), metricType: 'count' },
   
   // 💧 HYDRATION BADGES
-  { id: 'hydration_hero_1', name: 'Hydration Hero', description: 'Hit your water goal for the first time.', category: 'Nutrition', icon: '💧' },
-  { id: 'water_warrior_7', name: 'Water Warrior', description: 'Hit water goal for 7 days straight.', category: 'Nutrition', icon: '💦' },
-  { id: 'hydration_master_30', name: 'Hydration Master', description: 'Hit water goal for 30 days straight.', category: 'Nutrition', icon: '🌊' },
+  { id: 'hydration_hero', name: 'Hydration Hero', description: 'Stay hydrated and hit your daily water goals', category: 'Nutrition', icon: '💧', tiers: createTiers(3, 10, 30, 90), metricType: 'count' },
   
   // 🔥 STREAK & CONSISTENCY BADGES
-  { id: 'consistency_3_day', name: 'Getting Started', description: 'Maintained a 3-day streak in any category.', category: 'Consistency', icon: '🔥' },
-  { id: 'consistency_7_day', name: 'On a Roll', description: 'Maintained a 7-day streak in any category.', category: 'Consistency', icon: '🚀' },
-  { id: 'consistency_14_day', name: 'Two Weeks Strong', description: 'Maintained a 14-day streak.', category: 'Consistency', icon: '💎' },
-  { id: 'consistency_30_day', name: 'Monthly Grind', description: 'Maintained a 30-day streak.', category: 'Consistency', icon: '🏆' },
-  { id: 'consistency_60_day', name: 'Unstoppable', description: 'Maintained a 60-day streak.', category: 'Consistency', icon: '⚡' },
-  { id: 'consistency_100_day', name: 'Centurion', description: 'Maintained a 100-day streak!', category: 'Consistency', icon: '👑' },
-  { id: 'comeback_kid', name: 'Comeback Kid', description: 'Restarted your streak after breaking it.', category: 'Consistency', icon: '💫' },
+  { id: 'consistency_champion', name: 'Consistency Champion', description: 'Build unstoppable habits through daily commitment', category: 'Consistency', icon: '🔥', tiers: createTiers(3, 7, 14, 30), metricType: 'streak' },
+  { id: 'comeback_kid', name: 'Comeback Kid', description: 'Restarted your streak after a break - resilience wins!', category: 'Consistency', icon: '💫', tiers: createBooleanTier(), metricType: 'boolean' },
   
   // 📸 PROGRESS TRACKING BADGES
-  { id: 'photogenic', name: 'Photogenic', description: 'Uploaded your first set of progress photos.', category: 'Progress', icon: '📸' },
-  { id: 'progress_tracker_5', name: 'Progress Tracker', description: 'Uploaded 5 sets of progress photos.', category: 'Progress', icon: '📷' },
-  { id: 'weight_logger', name: 'Weight Logger', description: 'Logged your weight 10 times.', category: 'Progress', icon: '⚖️' },
-  { id: 'transformation_artist', name: 'Transformation Artist', description: 'Uploaded 10 sets of progress photos.', category: 'Progress', icon: '🎨' },
+  { id: 'progress_tracker', name: 'Progress Tracker', description: 'Document your transformation journey with progress logs', category: 'Progress', icon: '📷', tiers: createTiers(1, 5, 15, 30), metricType: 'count' },
+  { id: 'weight_logger', name: 'Weight Logger', description: 'Track your weight consistently for better results', category: 'Progress', icon: '⚖️', tiers: createTiers(5, 15, 30, 90), metricType: 'count' },
   
   // 🤖 AI USAGE BADGES
-  { id: 'ai_explorer', name: 'AI Explorer', description: 'Generated your first AI workout plan.', category: 'AI', icon: '🤖' },
-  { id: 'ai_meal_planner', name: 'AI Meal Planner', description: 'Generated your first AI meal plan.', category: 'AI', icon: '🍱' },
-  { id: 'ai_enthusiast', name: 'AI Enthusiast', description: 'Used AI tools 10 times.', category: 'AI', icon: '🧠' },
-  { id: 'ai_master', name: 'AI Master', description: 'Used AI tools 25 times.', category: 'AI', icon: '✨' },
+  { id: 'ai_master', name: 'AI Master', description: 'Leverage AI tools to optimize your fitness journey', category: 'AI', icon: '🧠', tiers: createTiers(1, 10, 25, 50), metricType: 'count' },
   
   // 🎯 CHALLENGE BADGES
-  { id: 'challenge_complete_1', name: 'Challenger', description: 'Completed your first weekly challenge.', category: 'Challenges', icon: '🌟' },
-  { id: 'challenge_veteran_5', name: 'Challenge Veteran', description: 'Completed 5 challenges.', category: 'Challenges', icon: '🎖️' },
-  { id: 'challenge_master_10', name: 'Challenge Master', description: 'Completed 10 challenges.', category: 'Challenges', icon: '🏅' },
-  { id: 'challenge_legend_25', name: 'Challenge Legend', description: 'Completed 25 challenges.', category: 'Challenges', icon: '👑' },
+  { id: 'challenge_legend', name: 'Challenge Legend', description: 'Complete weekly and monthly challenges to push your limits', category: 'Challenges', icon: '🏅', tiers: createTiers(1, 5, 10, 25), metricType: 'count' },
   
-  // 🌟 SPECIAL / MILESTONE BADGES
-  { id: 'level_10', name: 'Rookie Graduate', description: 'Reached level 10 - completed Newbie rank!', category: 'Milestones', icon: '🎓' },
-  { id: 'level_25', name: 'Rising Star', description: 'Reached level 25 - completed Rookie rank!', category: 'Milestones', icon: '⭐' },
-  { id: 'level_40', name: 'Unit Complete', description: 'Reached level 40 - completed Unit rank!', category: 'Milestones', icon: '💪' },
-  { id: 'level_60', name: 'Gym Rat Elite', description: 'Reached level 60 - completed Gym Rat rank!', category: 'Milestones', icon: '🐀' },
-  { id: 'level_80', name: 'Addiction Mastered', description: 'Reached level 80 - completed Gym Addict rank!', category: 'Milestones', icon: '🔥' },
-  { id: 'level_100', name: 'BODYBUILDER', description: 'Reached MAX LEVEL 100 - Ultimate Achievement!', category: 'Milestones', icon: '👑' },
-  { id: 'perfectionist', name: 'Perfectionist', description: 'Maintained 100% macro accuracy for 5 days.', category: 'Special', icon: '💯' },
-  { id: 'early_adopter', name: 'Early Adopter', description: 'Joined the fitness journey!', category: 'Special', icon: '🎁' },
+  // 🌟 MILESTONE BADGES (Level-based)
+  { id: 'level_10', name: 'Rookie Graduate', description: 'Reached level 10 - completed Newbie rank!', category: 'Milestones', icon: '🎓', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'level_25', name: 'Rising Star', description: 'Reached level 25 - completed Rookie rank!', category: 'Milestones', icon: '⭐', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'level_40', name: 'Unit Complete', description: 'Reached level 40 - completed Unit rank!', category: 'Milestones', icon: '💪', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'level_60', name: 'Gym Rat Elite', description: 'Reached level 60 - completed Gym Rat rank!', category: 'Milestones', icon: '🐀', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'level_80', name: 'Addiction Mastered', description: 'Reached level 80 - completed Gym Addict rank!', category: 'Milestones', icon: '🔥', tiers: createBooleanTier(), metricType: 'boolean' },
+  { id: 'level_100', name: 'BODYBUILDER', description: 'Reached MAX LEVEL 100 - Ultimate Achievement!', category: 'Milestones', icon: '👑', tiers: createBooleanTier(), metricType: 'boolean' },
+  
+  // 🎁 SPECIAL BADGES
+  { id: 'early_adopter', name: 'Early Adopter', description: 'Joined the fitness journey early!', category: 'Special', icon: '🎁', tiers: createBooleanTier(), metricType: 'boolean' },
 ];
 
 // 🎯 ENHANCED CHALLENGE SYSTEM
