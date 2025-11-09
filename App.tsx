@@ -160,6 +160,16 @@ const App: React.FC = () => {
     } = useGamification();
 
     useEffect(() => {
+        const needsNormalization = savedWorkouts.some(sw => sw.status === undefined || sw.status === null);
+        if (needsNormalization) {
+            setSavedWorkouts(prev => prev.map(sw => ({
+                ...sw,
+                status: sw.status ?? 'inactive'
+            })));
+        }
+    }, []);
+
+    useEffect(() => {
         const initializeFromDatabase = async () => {
             try {
                 const healthCheck = await checkDatabaseHealth();
@@ -399,7 +409,7 @@ const App: React.FC = () => {
     }, [setQuickAddMeals]);
 
     const addSavedWorkout = useCallback((program: TrainingProgram, name: string, tags: string[], showAlert: boolean = true) => {
-        const newSavedWorkout: SavedWorkout = { ...program, id: `sw-${Date.now()}`, programName: name, tags, isPinned: false };
+        const newSavedWorkout: SavedWorkout = { ...program, id: `sw-${Date.now()}`, programName: name, tags, isPinned: false, status: 'inactive' };
         setSavedWorkouts(prev => {
             if (prev.some(sw => sw.programName === newSavedWorkout.programName && JSON.stringify(sw.workouts) === JSON.stringify(newSavedWorkout.workouts))) {
                 if(showAlert) alert(`${name} is already in your library.`);
@@ -452,7 +462,7 @@ const App: React.FC = () => {
     }, [setActiveMealPlan, setMacroTargets]);
 
     const activateGeneratedProgram = useCallback((program: TrainingProgram) => {
-        const newSavedWorkout: SavedWorkout = { ...program, id: `sw-${Date.now()}`, programName: program.programName, tags: program.preferences?.goal ? [program.preferences.goal] : [], isPinned: false };
+        const newSavedWorkout: SavedWorkout = { ...program, id: `sw-${Date.now()}`, programName: program.programName, tags: program.preferences?.goal ? [program.preferences.goal] : [], isPinned: false, status: 'inactive' };
         setSavedWorkouts(prev => prev.some(sw => sw.programName === newSavedWorkout.programName) ? prev : [...prev, newSavedWorkout]);
         const activeProgram: TrainingProgram = { ...program };
         delete activeProgram.preferences;
@@ -462,6 +472,13 @@ const App: React.FC = () => {
 
     const updateSavedWorkout = useCallback((updatedWorkout: SavedWorkout) => {
         setSavedWorkouts(prev => prev.map(sw => sw.id === updatedWorkout.id ? updatedWorkout : sw));
+    }, [setSavedWorkouts]);
+
+    const setActiveWorkout = useCallback((workoutId: string) => {
+        setSavedWorkouts(prev => prev.map(sw => ({
+            ...sw,
+            status: sw.id === workoutId ? 'active' : (sw.status === 'draft' ? 'draft' : 'inactive')
+        })));
     }, [setSavedWorkouts]);
 
     const deleteSavedWorkout = useCallback((workoutId: string) => {
@@ -520,7 +537,7 @@ const App: React.FC = () => {
     const renderScreen = () => {
         switch (activeScreen) {
             case 'home': return <HomeScreen user={user} macros={macrosToday} macroTargets={macroTargets} setMacroTargets={setMacroTargets} trainingProgram={trainingProgram} dailyLogs={dailyLogs} meals={meals} setActiveScreen={setActiveScreen} autoAdjustMacros={autoAdjustMacros} savedWorkouts={savedWorkouts} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} gamificationData={gamificationData} levelInfo={levelInfo} lootInventory={lootInventory} />;
-            case 'train': return <TrainScreen program={trainingProgram} setProgram={setTrainingProgram} generatePlan={generatePlan} activateGeneratedProgram={activateGeneratedProgram} isLoading={isLoadingPlan} weightUnit={weightUnit} savedWorkouts={savedWorkouts} addSavedWorkout={addSavedWorkout} updateSavedWorkout={updateSavedWorkout} deleteSavedWorkout={deleteSavedWorkout} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} completeWorkout={completeWorkout} progressionPreference={progressionPreference} setProgressionPreference={setProgressionPreference} favoriteExercises={favoriteExercises} toggleFavoriteExercise={toggleFavoriteExercise} drafts={drafts} saveDraft={saveDraft} deleteDraft={deleteDraft} />;
+            case 'train': return <TrainScreen program={trainingProgram} setProgram={setTrainingProgram} generatePlan={generatePlan} activateGeneratedProgram={activateGeneratedProgram} isLoading={isLoadingPlan} weightUnit={weightUnit} savedWorkouts={savedWorkouts} addSavedWorkout={addSavedWorkout} updateSavedWorkout={updateSavedWorkout} setActiveWorkout={setActiveWorkout} deleteSavedWorkout={deleteSavedWorkout} startSavedWorkout={startSavedWorkout} workoutHistory={workoutHistory} completeWorkout={completeWorkout} progressionPreference={progressionPreference} setProgressionPreference={setProgressionPreference} favoriteExercises={favoriteExercises} toggleFavoriteExercise={toggleFavoriteExercise} drafts={drafts} saveDraft={saveDraft} deleteDraft={deleteDraft} />;
             case 'log': return <LogScreen meals={meals} addMeal={addMeal} removeFoodItem={removeFoodItem} quickAddMeals={quickAddMeals} addQuickAddMeal={addQuickAddMeal} onGenerateMealPlan={handleGenerateMealPlan} isGeneratingMealPlan={isGeneratingMealPlan} generatedMealPlan={generatedMealPlan} onActivateMealPlan={handleActivateMealPlan} activeMealPlan={activeMealPlan} onDeactivateMealPlan={handleDeactivateMealPlan} onUpdateActiveMealPlan={updateActiveMealPlan} user={user} currentWeightKg={currentWeightKg} weightUnit={weightUnit}/>;
             case 'progress': return <ProgressScreen user={user} photos={photos} setPhotos={setPhotos} dailyLogs={dailyLogs} macroTargets={activeMacroTargets} weightLogs={weightLogs} setWeightLogs={setWeightLogs} currentWeightKg={currentWeightKg} setCurrentWeightKg={setCurrentWeightKg} weightGoalKg={weightGoalKg} setWeightGoalKg={setWeightGoalKg} waterIntake={todaysWaterIntake} setWaterIntake={setTodaysWaterIntake} waterGoal={waterGoal} setWaterGoal={setWaterGoal} weightUnit={weightUnit} setWeightUnit={setWeightUnit} waterUnit={waterUnit} setWaterUnit={setWaterUnit} waterLogs={waterLogs} milestones={milestones} addMilestone={addMilestone} celebrationMilestone={celebrationMilestone} setCelebrationMilestone={setCelebrationMilestone} gamificationData={gamificationData} levelInfo={levelInfo} lootInventory={lootInventory} />;
             case 'coach': return <CoachScreen />;

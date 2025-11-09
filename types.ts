@@ -149,6 +149,7 @@ export interface SavedWorkout extends TrainingProgram {
   tags: string[];
   lastPerformed?: string; // "YYYY-MM-DD"
   isPinned?: boolean;
+  status: 'active' | 'inactive' | 'draft';
 }
 
 export interface WeightLog {

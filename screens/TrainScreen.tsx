@@ -86,6 +86,7 @@ interface TrainScreenProps {
   savedWorkouts: SavedWorkout[];
   addSavedWorkout: (program: TrainingProgram, name: string, tags: string[], showAlert?: boolean) => void;
   updateSavedWorkout: (workout: SavedWorkout) => void;
+  setActiveWorkout: (workoutId: string) => void;
   deleteSavedWorkout: (workoutId: string) => void;
   startSavedWorkout: (workout: SavedWorkout) => void;
   workoutHistory: WorkoutHistory;
