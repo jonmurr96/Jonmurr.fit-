@@ -19,7 +19,7 @@ export const XPToast: React.FC<XPToastProps> = ({ amount, reason, onDismiss, dur
       dismissRef.current();
     }, duration);
     return () => clearTimeout(timer);
-  }, [duration]);
+  }, [duration, amount, reason]);
 
   return (
     <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
