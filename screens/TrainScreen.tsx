@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TrainingProgram, Workout, Exercise, WorkoutSet, WorkoutPlanPreferences, FitnessGoal, Equipment, SavedWorkout, ProgressionPreference, ProgressionSuggestion, WorkoutHistory, WorkoutDraft, Gender, SessionDuration, FocusArea, TrainingStyle, WeightBehavior, MedicalCondition, ExperienceLevel, OptionalBlock } from '../types';
 import { searchExercises, processWorkoutCommand, getProgressionSuggestions, getPostWorkoutRecap } from '../services/geminiService';
-import { TrashIcon, ArrowsRightLeftIcon, PlusIcon, InformationCircleIcon, ArrowLeftIcon, GripVerticalIcon, ClipboardListIcon, BookmarkIcon, MicrophoneIcon, PinIcon, ChevronRightIcon, SettingsIcon, SparklesIcon, PencilIcon, HeartIcon } from '../components/Icons';
+import { TrashIcon, ArrowsRightLeftIcon, PlusIcon, InformationCircleIcon, ArrowLeftIcon, GripVerticalIcon, ClipboardListIcon, BookmarkIcon, MicrophoneIcon, PinIcon, ChevronRightIcon, SettingsIcon, SparklesIcon, PencilIcon, HeartIcon, DocumentIcon } from '../components/Icons';
 import { getExerciseHistory, formatHistoryForPrompt } from '../utils/progressionEngine';
 import { HeroSection } from '../components/train/HeroSection';
 import { ActionCard } from '../components/train/ActionCard';
 import { SuggestionsStrip } from '../components/train/SuggestionsStrip';
+import { ImportWorkoutModal } from '../components/import/ImportWorkoutModal';
 
 
 declare global {
@@ -1440,11 +1441,12 @@ interface TrainingHomeProps {
   onBuild: () => void;
   onLoad: () => void;
   onFavorites: () => void;
+  onImport: () => void;
   savedWorkouts: SavedWorkout[];
   onStart: (workout: SavedWorkout) => void;
 }
 
-const TrainingHome: React.FC<TrainingHomeProps> = ({ onGenerate, onBuild, onLoad, onFavorites, savedWorkouts, onStart }) => {
+const TrainingHome: React.FC<TrainingHomeProps> = ({ onGenerate, onBuild, onLoad, onFavorites, onImport, savedWorkouts, onStart }) => {
     const handleSuggestionSelect = (label: string) => {
         onGenerate();
     };
@@ -1474,20 +1476,25 @@ const TrainingHome: React.FC<TrainingHomeProps> = ({ onGenerate, onBuild, onLoad
                 />
                 
                 <ActionCard
+                    title="Import Workout Plan"
+                    subtitle="Bring in plans from text, files, or photos"
+                    icon={<DocumentIcon className="w-full h-full" />}
+                    onClick={onImport}
+                />
+                
+                <ActionCard
                     title="Load Saved Workouts"
                     subtitle="Load your past AI or manual plans"
                     icon={<BookmarkIcon className="w-full h-full" />}
                     onClick={onLoad}
                 />
                 
-                <div className="md:col-span-2">
-                    <ActionCard
-                        title="Favorite Exercises"
-                        subtitle="Quick access to your go-to movements"
-                        icon={<HeartIcon className="w-full h-full" />}
-                        onClick={onFavorites}
-                    />
-                </div>
+                <ActionCard
+                    title="Favorite Exercises"
+                    subtitle="Quick access to your go-to movements"
+                    icon={<HeartIcon className="w-full h-full" />}
+                    onClick={onFavorites}
+                />
             </div>
             
             <SuggestionsStrip onSelect={handleSuggestionSelect} />
@@ -1548,6 +1555,8 @@ const TrainScreenComponent: React.FC<TrainScreenProps> = (props) => {
     const [generatedPlan, setGeneratedPlan] = useState<TrainingProgram | null>(null);
     const [generationPrefs, setGenerationPrefs] = useState<WorkoutPlanPreferences | null>(null);
     
+    const [showImportModal, setShowImportModal] = useState(false);
+    
     const todayDay = useMemo(() => new Date().getDay() || 7, []);
     const [selectedDay, setSelectedDay] = useState<number>(todayDay);
     const weekDateNumbers = useMemo(() => getWeekDateNumbers(), []);
@@ -1583,6 +1592,12 @@ const TrainScreenComponent: React.FC<TrainScreenProps> = (props) => {
     const handleEditProgram = (p: SavedWorkout | WorkoutDraft) => {
         setEditingProgram(p);
         setView('workoutBuilder');
+    };
+
+    const handleImportWorkout = (program: TrainingProgram, aiReview?: string) => {
+        addSavedWorkout(program);
+        setShowImportModal(false);
+        setView('home');
     };
 
     const handleSaveFromBuilder = (p: TrainingProgram) => {
@@ -1863,6 +1878,7 @@ const TrainScreenComponent: React.FC<TrainScreenProps> = (props) => {
                             onBuild={() => { setEditingProgram(null); setView('workoutBuilder'); }}
                             onLoad={() => setView('savedWorkouts')}
                             onFavorites={() => setView('favorites')}
+                            onImport={() => setShowImportModal(true)}
                             savedWorkouts={savedWorkouts}
                             onStart={handleStartSavedWorkoutAndShow}
                         />;
@@ -1879,12 +1895,17 @@ const TrainScreenComponent: React.FC<TrainScreenProps> = (props) => {
                         <p className="text-zinc-300 mb-6">Would you like to save your work as a draft before exiting?</p>
                         <div className="flex flex-col gap-3">
                             <button onClick={confirmAndSaveDraft} className="px-6 py-2 rounded-lg bg-green-500 text-black font-bold hover:bg-green-600 transition-colors">Save Draft & Exit</button>
-                            <button onClick={exitWithoutSaving} className="px-6 py-2 rounded-lg bg-red-600/20 text-red-400 font-semibold hover:bg-red-600/40 hover:text-red-300 transition-colors">Discard & Exit</button>
+                            <button onClick={exitWithoutSaving} className="px-6 py-2 rounded-lg bg-red-600/40 text-red-400 font-semibold hover:bg-red-600/40 hover:text-red-300 transition-colors">Discard & Exit</button>
                             <button onClick={() => setConfirmExit(null)} className="mt-2 text-zinc-400 text-sm">Cancel</button>
                         </div>
                     </div>
                 </div>
             )}
+            <ImportWorkoutModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                onImport={handleImportWorkout}
+            />
         </div>
     );
 };

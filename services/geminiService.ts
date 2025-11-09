@@ -598,3 +598,137 @@ Coach:`;
         return "I'm sorry, I'm having trouble connecting right now. Please try again later.";
     }
 };
+
+export interface ParsedWorkout {
+  program: TrainingProgram;
+  unmatchedExercises: string[];
+}
+
+export const parseWorkoutText = async (text: string): Promise<ParsedWorkout | null> => {
+  try {
+    const prompt = `You are an expert AI workout plan parser. Your task is to analyze the provided workout text and extract structured workout data.
+
+**Input Text:**
+${text}
+
+**Instructions:**
+1. Extract the program name (or create one if not specified, e.g., "Imported Workout Plan")
+2. Determine the duration in weeks (default to 4 if not specified)
+3. Parse all exercises with their sets, reps, and rest times
+4. Organize into workout days (Day 1, Day 2, etc.) based on the text structure
+5. For each exercise, extract:
+   - Exercise name
+   - Number of sets
+   - Rep range (e.g., "8-12 reps" or "AMRAP")
+   - Rest time in minutes (default to 1.5 if not specified)
+6. Infer the split type (e.g., "Push/Pull/Legs", "Full Body", "Upper/Lower")
+7. Create a description summarizing the program
+
+**Format Rules:**
+- Each workout day should have a "day" number (1-7 for Mon-Sun)
+- The "focus" field should describe the day (e.g., "Day 1 - Push (Chest, Shoulders, Triceps)")
+- Exercise names should be standardized (e.g., "Bench Press" not "bench")
+- If text mentions "Day 1: Push", assign day=1, focus="Push (Chest, Shoulders, Triceps)"
+- If no specific days mentioned, create a logical split
+
+Your response MUST be valid JSON adhering to the provided schema.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            programName: { type: Type.STRING },
+            durationWeeks: { type: Type.NUMBER },
+            description: { type: Type.STRING },
+            splitType: { type: Type.STRING },
+            workouts: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  day: { type: Type.NUMBER },
+                  focus: { type: Type.STRING },
+                  completed: { type: Type.BOOLEAN },
+                  exercises: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        id: { type: Type.STRING },
+                        name: { type: Type.STRING },
+                        sets: {
+                          type: Type.ARRAY,
+                          items: {
+                            type: Type.OBJECT,
+                            properties: {
+                              id: { type: Type.NUMBER },
+                              targetReps: { type: Type.STRING },
+                              completed: { type: Type.BOOLEAN },
+                              restMinutes: { type: Type.NUMBER }
+                            },
+                            required: ["id", "targetReps", "completed", "restMinutes"]
+                          }
+                        }
+                      },
+                      required: ["id", "name", "sets"]
+                    }
+                  }
+                },
+                required: ["id", "day", "focus", "completed", "exercises"]
+              }
+            }
+          },
+          required: ["programName", "durationWeeks", "description", "splitType", "workouts"]
+        }
+      }
+    });
+
+    const jsonStr = response.text.trim();
+    const program = JSON.parse(jsonStr) as TrainingProgram;
+    
+    return {
+      program,
+      unmatchedExercises: []
+    };
+  } catch (error) {
+    console.error("Error parsing workout text:", error);
+    return null;
+  }
+};
+
+export const reviewImportedWorkout = async (program: TrainingProgram): Promise<string> => {
+  try {
+    const workoutSummary = program.workouts.map(w => 
+      `${w.focus}: ${w.exercises.length} exercises`
+    ).join(', ');
+
+    const prompt = `You are an expert AI fitness coach reviewing an imported workout plan. Provide brief, constructive feedback.
+
+**Program:** ${program.programName}
+**Split:** ${program.splitType}
+**Workouts:** ${workoutSummary}
+
+Analyze for:
+1. Muscle group balance (push/pull ratio, upper/lower balance)
+2. Volume appropriateness (too high or too low)
+3. Missing muscle groups or days
+4. Recovery concerns
+
+Provide 2-3 short, actionable suggestions. Be encouraging but honest. Keep it under 100 words.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Error reviewing imported workout:", error);
+    return "Great job importing your workout! Make sure to balance push and pull exercises, and don't forget leg day!";
+  }
+};

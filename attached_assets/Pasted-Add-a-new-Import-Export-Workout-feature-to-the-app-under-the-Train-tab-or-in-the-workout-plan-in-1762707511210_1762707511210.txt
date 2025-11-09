@@ -1,0 +1,65 @@
+Add a new “Import / Export Workout” feature to the app under the Train tab or in the workout plan interface.
+
+⸻
+
+🔁 FEATURE: Import Workout Plan
+
+Allow users to import a workout plan using any of the following methods:
+
+Import Methods (user selects one):
+	1.	Upload a File (.pdf, .docx, .txt, .json)
+→ Extract exercises, sets, reps, notes
+	2.	Paste Text
+→ Freeform input like:
+Day 1: Push – Bench Press 4x10, OHP 3x8…
+	3.	Take a Photo of a Workout Plan
+→ Use OCR to extract exercises from image
+→ Ask user to confirm detected exercises
+→ Map to database (AI auto-suggests or lets user search/correct)
+	4.	Import From Coach (AI-generated or shared)
+→ User enters a unique workout code or URL
+→ Plan is fetched and loaded into their “Saved Workouts”
+
+Post-Import Flow:
+	•	Prompt user to name the workout
+	•	Auto-tag by type (Push/Pull/Legs, Full Body, etc. using NLP)
+	•	Save to “Load Saved Workouts” section
+	•	Optionally edit imported plan manually
+	•	Sync with progress tracker and XP system
+
+⸻
+
+📧 FEATURE: Export Workout as PDF
+
+Allow any AI-generated or user-created workout to be exported as a clean, well-formatted PDF.
+
+User chooses from export options:
+	•	Entire Plan (with split, day breakdowns, notes)
+	•	Single Workout Day
+	•	Summary Only (exercise names + reps + sets)
+
+Export Flow:
+	•	Button on each workout: “Export as PDF”
+	•	Option to email the PDF to user
+	•	Or download directly to device
+	•	Include branding, date created, and any badges/streak icons earned that week (optional)
+
+⸻
+
+⚙️ Technical / Functional Notes:
+	•	All imported workouts should be parsed, mapped to existing exercise database, and saved in standard format
+	•	If AI can’t match an exercise, prompt user to assign a known equivalent or add a custom one
+	•	Sync all imported/exported workouts with:
+	•	Saved Workouts
+	•	Progress tracking
+	•	XP system (bonus for importing plan and staying consistent)
+
+⸻
+
+🧠 Optional Add-On:
+
+Add an AI Review Mode:
+	•	After importing, let AI provide feedback:
+“This plan is push-heavy — want to balance with more pull work?”
+“No leg day detected — want to add one?”
+“Volume looks high for a beginner. Adjust it?”
