@@ -7,6 +7,7 @@ interface LevelUpEvent {
   oldLevel: number;
   newLevel: number;
   newRank: string;
+  perksUnlocked: string[];
   chest?: UnlockedLoot;
 }
 
@@ -79,21 +80,28 @@ export const useGamification = () => {
     }
   ): Promise<void> => {
     try {
+      // Capture OLD level before transaction
+      const currentLevelInfo = await gamificationService.getLevelInfo();
+      const oldLevel = currentLevelInfo.numericLevel;
+
       const result = await gamificationService.addXPWithTransaction(amount, reason, source);
 
-      // Update local state
+      // ALWAYS update level info after XP transaction (for progress bars, even without level-up)
+      const newLevelInfo = await gamificationService.getLevelInfo();
+      setLevelInfo(newLevelInfo);
+
+      // Update local XP state
       setGamificationData(prev => ({ ...prev, xp: result.newXP }));
       
-      // If level up occurred, update level info and queue feedback
+      // If level up occurred, queue feedback and update loot
       if (result.leveledUp && result.newLevel) {
-        const newLevelInfo = await gamificationService.getLevelInfo();
-        setLevelInfo(newLevelInfo);
-
+        // Level-up event goes to queue FIRST (higher priority)
         setFeedbackQueue(prev => [...prev, {
           levelUp: {
-            oldLevel: levelInfo.numericLevel,
+            oldLevel,
             newLevel: result.newLevel!,
             newRank: newLevelInfo.rankTitle,
+            perksUnlocked: newLevelInfo.perksUnlocked,
             chest: result.chestUnlocked,
           }
         }]);
@@ -101,19 +109,22 @@ export const useGamification = () => {
         if (result.chestUnlocked) {
           setLootInventory(prev => [...prev, result.chestUnlocked!]);
         }
+      } else {
+        // Only show XP toast if NO level-up (level-up modal shows XP gain)
+        setFeedbackQueue(prev => [...prev, {
+          xpToast: { amount, reason }
+        }]);
       }
-
-      // Queue XP toast notification
-      setFeedbackQueue(prev => [...prev, {
-        xpToast: { amount, reason }
-      }]);
 
       // Check for new badges if context provided
       if (badgeContext) {
+        // Fetch fresh streaks to avoid stale closure data
+        const freshState = await gamificationService.getGamificationState();
+        
         const newBadges = await gamificationService.checkAndAwardBadges({
           ...badgeContext,
-          streaks: gamificationData.streaks,
-          currentLevel: result.leveledUp ? result.newLevel : levelInfo.numericLevel,
+          streaks: freshState.streaks,
+          currentLevel: result.leveledUp ? result.newLevel : currentLevelInfo.numericLevel,
           totalXP: result.newXP,
         });
 
@@ -131,7 +142,7 @@ export const useGamification = () => {
     } catch (error) {
       console.error('Error awarding XP:', error);
     }
-  }, [levelInfo.numericLevel, gamificationData.streaks]);
+  }, []);
 
   // Update streak with XP bonus
   const updateStreak = useCallback(async (type: 'workout' | 'meal' | 'water'): Promise<void> => {
@@ -142,7 +153,9 @@ export const useGamification = () => {
     const todayStr = today.toISOString().split('T')[0];
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    const streak = gamificationData.streaks[type];
+    // Fetch fresh streak data to avoid stale closures
+    const freshState = await gamificationService.getGamificationState();
+    const streak = freshState.streaks[type];
     let newStreak = { ...streak };
     let xpFromStreak = 0;
 
@@ -175,7 +188,7 @@ export const useGamification = () => {
         console.error('Error updating streak:', error);
       }
     }
-  }, [gamificationData.streaks, awardXpWithContext]);
+  }, [awardXpWithContext]);
 
   // Log AI usage with XP reward
   const logAIUsage = useCallback(async (type: 'workout_plan' | 'meal_plan' | 'coaching', aiUsageCount: number): Promise<void> => {
@@ -184,17 +197,12 @@ export const useGamification = () => {
     await awardXpWithContext(xpReward, `Generated ${type.replace('_', ' ')}`, 'ai_usage', { aiUsageCount });
   }, [awardXpWithContext]);
 
-  // Clear feedback (call after showing UI)
-  const clearFeedback = useCallback(() => {
-    setFeedbackQueue([]);
-  }, []);
-
   // Get next feedback item
   const getNextFeedback = useCallback((): GamificationFeedback | undefined => {
     return feedbackQueue[0];
   }, [feedbackQueue]);
 
-  // Dismiss current feedback
+  // Dismiss current feedback (advances queue by 1)
   const dismissFeedback = useCallback(() => {
     setFeedbackQueue(prev => prev.slice(1));
   }, []);
@@ -207,7 +215,6 @@ export const useGamification = () => {
     awardXpWithContext,
     updateStreak,
     logAIUsage,
-    clearFeedback,
     getNextFeedback,
     dismissFeedback,
   };
