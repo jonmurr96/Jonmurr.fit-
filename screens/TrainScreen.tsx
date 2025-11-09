@@ -7,6 +7,7 @@ import { HeroSection } from '../components/train/HeroSection';
 import { ActionCard } from '../components/train/ActionCard';
 import { SuggestionsStrip } from '../components/train/SuggestionsStrip';
 import { ImportWorkoutModal } from '../components/import/ImportWorkoutModal';
+import { StatusBadge } from '../components/StatusBadge';
 
 
 declare global {
@@ -1263,8 +1264,10 @@ const SavedWorkoutsView: React.FC<{
     onDelete: (workoutId: string) => void;
     onPin: (workoutId: string) => void;
     onDeleteDraft: (draftId: string) => void;
-}> = ({ drafts, savedWorkouts, onBack, onStart, onEdit, onDelete, onPin, onDeleteDraft }) => {
-    const sortedWorkouts = [...savedWorkouts].sort((a,b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    onSetActive: (workoutId: string) => void;
+}> = ({ drafts, savedWorkouts, onBack, onStart, onEdit, onDelete, onPin, onDeleteDraft, onSetActive }) => {
+    const activeWorkout = savedWorkouts.find(w => w.status === 'active');
+    const inactiveWorkouts = savedWorkouts.filter(w => w.status === 'inactive').sort((a,b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
     
     const timeSince = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -1282,6 +1285,35 @@ const SavedWorkoutsView: React.FC<{
         return Math.floor(seconds) + " seconds ago";
     };
 
+    const renderWorkoutCard = (workout: SavedWorkout) => (
+        <div key={workout.id} className="bg-zinc-900 rounded-xl p-4">
+            <div className="flex justify-between items-start mb-2">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                        <p className="font-bold text-white">{workout.programName}</p>
+                        {workout.isPinned && <PinIcon className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                        <StatusBadge status={workout.status} />
+                    </div>
+                    <p className="text-sm text-zinc-400">{workout.workouts.length} days &bull; {workout.tags?.slice(0, 2).join(', ') || 'No tags'}</p>
+                    {workout.lastPerformed && <p className="text-xs text-zinc-500 mt-1">Last performed: {timeSince(workout.lastPerformed)}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => onPin(workout.id)} title="Pin workout"><PinIcon className={`w-5 h-5 ${workout.isPinned ? 'text-amber-400 fill-amber-400' : 'text-zinc-500 hover:text-amber-400'}`} /></button>
+                    <button onClick={() => onDelete(workout.id)} title="Delete workout"><TrashIcon className="w-5 h-5 text-zinc-500 hover:text-red-400"/></button>
+                </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+                {workout.status === 'inactive' && (
+                    <button onClick={() => onSetActive(workout.id)} className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-sm border border-zinc-700">
+                        Set as Active
+                    </button>
+                )}
+                <button onClick={() => onEdit(workout)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2 rounded-lg text-sm">Edit</button>
+                <button onClick={() => onStart(workout)} className="flex-1 bg-green-500 hover:bg-green-600 text-black font-bold py-2 rounded-lg text-sm">Start</button>
+            </div>
+        </div>
+    );
+
     return (
         <div className="p-4 space-y-6 text-white pb-24 h-full flex flex-col">
             <div className="flex items-center">
@@ -1293,6 +1325,15 @@ const SavedWorkoutsView: React.FC<{
             </div>
             
             <div className="flex-1 overflow-y-auto space-y-6">
+                {activeWorkout && (
+                    <div>
+                        <h2 className="font-bold text-zinc-400 mb-3">ACTIVE PLAN</h2>
+                        <div className="space-y-3">
+                            {renderWorkoutCard(activeWorkout)}
+                        </div>
+                    </div>
+                )}
+                
                 {drafts.length > 0 && (
                     <div>
                         <h2 className="font-bold text-zinc-400 mb-3">DRAFTS</h2>
@@ -1300,7 +1341,10 @@ const SavedWorkoutsView: React.FC<{
                         {drafts.map(draft => (
                             <div key={draft.id} className="bg-zinc-900 rounded-xl p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="font-bold text-white">{draft.programName}</p>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <p className="font-bold text-white">{draft.programName}</p>
+                                        <StatusBadge status="draft" />
+                                    </div>
                                     <p className="text-xs text-zinc-500">Last modified: {timeSince(draft.lastModified)}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -1313,35 +1357,18 @@ const SavedWorkoutsView: React.FC<{
                     </div>
                 )}
                 
-                <div>
-                    <h2 className="font-bold text-zinc-400 mb-3">MY LIBRARY</h2>
-                     <div className="space-y-3">
-                    {sortedWorkouts.length > 0 ? sortedWorkouts.map(workout => (
-                        <div key={workout.id} className="bg-zinc-900 rounded-xl p-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="font-bold text-white flex items-center gap-2">
-                                        {workout.programName}
-                                        {workout.isPinned && <PinIcon className="w-4 h-4 text-amber-400 fill-amber-400" />}
-                                    </p>
-                                    <p className="text-sm text-zinc-400">{workout.workouts.length} days &bull; {workout.tags?.slice(0, 2).join(', ') || 'No tags'}</p>
-                                    {workout.lastPerformed && <p className="text-xs text-zinc-500 mt-1">Last performed: {timeSince(workout.lastPerformed)}</p>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => onPin(workout.id)} title="Pin workout"><PinIcon className={`w-5 h-5 ${workout.isPinned ? 'text-amber-400 fill-amber-400' : 'text-zinc-500 hover:text-amber-400'}`} /></button>
-                                    <button onClick={() => onDelete(workout.id)} title="Delete workout"><TrashIcon className="w-5 h-5 text-zinc-500 hover:text-red-400"/></button>
-                                </div>
-                            </div>
-                            <div className="flex gap-2 mt-4">
-                                <button onClick={() => onEdit(workout)} className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2 rounded-lg text-sm">Edit</button>
-                                <button onClick={() => onStart(workout)} className="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-2 rounded-lg text-sm">Start</button>
-                            </div>
+                {inactiveWorkouts.length > 0 && (
+                    <div>
+                        <h2 className="font-bold text-zinc-400 mb-3">MY LIBRARY</h2>
+                        <div className="space-y-3">
+                            {inactiveWorkouts.map(renderWorkoutCard)}
                         </div>
-                    )) : (
-                        <p className="text-zinc-500 text-center py-8">No saved workouts yet. Create one or generate one with AI!</p>
-                    )}
                     </div>
-                </div>
+                )}
+                
+                {!activeWorkout && inactiveWorkouts.length === 0 && drafts.length === 0 && (
+                    <p className="text-zinc-500 text-center py-8">No saved workouts yet. Create one or generate one with AI!</p>
+                )}
             </div>
         </div>
     );
@@ -1544,7 +1571,7 @@ const DayTab: React.FC<{
 
 
 const TrainScreenComponent: React.FC<TrainScreenProps> = (props) => {
-    const { program, setProgram, generatePlan, activateGeneratedProgram, isLoading, weightUnit, savedWorkouts, addSavedWorkout, updateSavedWorkout, deleteSavedWorkout, startSavedWorkout, drafts, saveDraft, deleteDraft, favoriteExercises, toggleFavoriteExercise, workoutHistory, completeWorkout } = props;
+    const { program, setProgram, generatePlan, activateGeneratedProgram, isLoading, weightUnit, savedWorkouts, addSavedWorkout, updateSavedWorkout, setActiveWorkout, deleteSavedWorkout, startSavedWorkout, drafts, saveDraft, deleteDraft, favoriteExercises, toggleFavoriteExercise, workoutHistory, completeWorkout } = props;
     
     type TrainView = 'home' | 'generatePlan' | 'workoutBuilder' | 'savedWorkouts' | 'favorites';
     const [view, setView] = useState<TrainView>('home');
@@ -1864,6 +1891,7 @@ const TrainScreenComponent: React.FC<TrainScreenProps> = (props) => {
                             onDelete={deleteSavedWorkout}
                             onPin={(id) => updateSavedWorkout({...savedWorkouts.find(s=>s.id===id)!, isPinned: !savedWorkouts.find(s=>s.id===id)!.isPinned})}
                             onDeleteDraft={deleteDraft}
+                            onSetActive={setActiveWorkout}
                         />;
             case 'favorites':
                 return <FavoritesView 

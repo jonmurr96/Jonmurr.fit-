@@ -376,46 +376,35 @@ const QuickStartCard: React.FC<{
     savedWorkouts: SavedWorkout[];
     onStart: (workout: SavedWorkout) => void;
 }> = ({ savedWorkouts, onStart }) => {
-    const pinnedOrRecent = savedWorkouts
-        .sort((a, b) => {
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
-            if (a.lastPerformed && b.lastPerformed) return new Date(b.lastPerformed).getTime() - new Date(a.lastPerformed).getTime();
-            if (a.lastPerformed) return -1;
-            if (b.lastPerformed) return 1;
-            return 0;
-        })
-        .slice(0, 2);
+    const activeWorkout = savedWorkouts.find(w => w.status === 'active');
 
-    if (pinnedOrRecent.length === 0) {
+    if (!activeWorkout) {
         return null;
     }
 
     return (
         <div>
             <h2 className="text-xl font-bold">Quick Start</h2>
-            <div className="mt-4 space-y-3">
-                {pinnedOrRecent.map(workout => (
-                    <button 
-                        key={workout.id} 
-                        onClick={() => onStart(workout)}
-                        className="w-full bg-zinc-900 rounded-2xl p-4 text-left hover:bg-zinc-800 transition-colors flex items-center gap-4"
-                    >
-                        <div className="p-3 bg-zinc-800 rounded-lg">
-                            <TrophyIcon className="w-6 h-6 text-green-400" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-white flex items-center gap-2">
-                                {workout.programName}
-                                {workout.isPinned && <PinIcon className="w-4 h-4 text-amber-400 fill-amber-400" />}
-                            </p>
-                            <p className="text-sm text-zinc-400">
-                                {workout.workouts.length} days &bull; {workout.tags?.slice(0, 2).join(', ') || 'No tags'}
-                            </p>
-                        </div>
-                        <ChevronRightIcon className="w-6 h-6 text-zinc-600" />
-                    </button>
-                ))}
+            <div className="mt-4">
+                <button 
+                    onClick={() => onStart(activeWorkout)}
+                    className="w-full bg-zinc-900 rounded-2xl p-4 text-left hover:bg-zinc-800 transition-colors flex items-center gap-4"
+                >
+                    <div className="p-3 bg-zinc-800 rounded-lg">
+                        <TrophyIcon className="w-6 h-6 text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-white flex items-center gap-2">
+                            {activeWorkout.programName}
+                            {activeWorkout.isPinned && <PinIcon className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                        </p>
+                        <p className="text-sm text-zinc-400">
+                            {activeWorkout.workouts.length} days &bull; {activeWorkout.tags?.slice(0, 2).join(', ') || 'No tags'}
+                        </p>
+                        <p className="text-xs text-green-400 mt-1 font-semibold">Active Plan</p>
+                    </div>
+                    <ChevronRightIcon className="w-6 h-6 text-zinc-600" />
+                </button>
             </div>
         </div>
     );
