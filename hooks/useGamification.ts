@@ -190,11 +190,14 @@ export const useGamification = () => {
     }
   }, [awardXpWithContext]);
 
-  // Log AI usage with XP reward
-  const logAIUsage = useCallback(async (type: 'workout_plan' | 'meal_plan' | 'coaching', aiUsageCount: number): Promise<void> => {
+  // Log AI usage with XP reward (fetches count internally)
+  const logAIUsage = useCallback(async (type: 'workout_plan' | 'meal_plan' | 'coaching'): Promise<void> => {
     const xpReward = 75;
+    // Fetch current usage count before logging
+    const currentCount = await gamificationService.getAIUsageCount(type);
     await gamificationService.logAIUsage(type, xpReward);
-    await awardXpWithContext(xpReward, `Generated ${type.replace('_', ' ')}`, 'ai_usage', { aiUsageCount });
+    // Award XP with updated count for badge checking
+    await awardXpWithContext(xpReward, `Generated ${type.replace('_', ' ')}`, 'ai_usage', { aiUsageCount: currentCount + 1 });
   }, [awardXpWithContext]);
 
   // Get next feedback item
