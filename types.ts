@@ -279,7 +279,13 @@ export interface GeneratedMealPlan {
 }
 
 // --- Gamification Types ---
-export type Level = 'Beginner' | 'Intermediate' | 'Advanced' | 'Elite';
+
+// 🎮 NEW 100-LEVEL SYSTEM
+export type NumericLevel = number; // 1-100
+export type RankTitle = 'Newbie' | 'Rookie' | 'Unit' | 'Gym Rat' | 'Gym Addict' | 'Bodybuilder';
+
+// Legacy type for backward compatibility (deprecated)
+export type Level = 'Beginner' | 'Intermediate' | 'Advanced' | 'Elite' | RankTitle;
 
 export interface LevelInfo {
   level: Level;
@@ -289,13 +295,21 @@ export interface LevelInfo {
   progress: number;
 }
 
+export interface ExtendedLevelInfo extends LevelInfo {
+  numericLevel: number;
+  rankTitle: RankTitle;
+  rankProgress: number;
+  nextRankLevel: number | null;
+  perksUnlocked: string[];
+}
+
 export interface StreakData {
   current: number;
   longest: number;
   lastLogDate: string; // "YYYY-MM-DD"
 }
 
-export type BadgeCategory = 'Workout' | 'Nutrition' | 'Consistency' | 'Special';
+export type BadgeCategory = 'Workout' | 'Nutrition' | 'Consistency' | 'Special' | 'Progress' | 'AI' | 'Challenges' | 'Milestones';
 
 export interface Badge {
   id: string;
@@ -309,7 +323,18 @@ export interface EarnedBadge extends Badge {
   earnedOn: string; // "YYYY-MM-DD"
 }
 
-export type ChallengeType = 'logXWorkouts' | 'hitProteinXDays' | 'drinkXWaterXDays' | 'logXMeals';
+export type ChallengeType = 
+  | 'logXWorkouts' 
+  | 'hitProteinXDays' 
+  | 'drinkXWaterXDays' 
+  | 'logXMeals' 
+  | 'hitAllMacrosXDays' 
+  | 'maintainStreak' 
+  | 'logWeightXTimes' 
+  | 'perfectDaysInRow' 
+  | 'recovery';
+
+export type ChallengePeriod = 'weekly' | 'monthly' | 'special';
 
 export interface Challenge {
   id: string;
@@ -321,7 +346,7 @@ export interface Challenge {
   badgeId?: string;
   isCompleted: boolean;
   type: ChallengeType;
-  period: 'weekly';
+  period: ChallengePeriod;
 }
 
 export interface GamificationState {
@@ -333,4 +358,30 @@ export interface GamificationState {
   };
   earnedBadges: EarnedBadge[];
   challenges: Challenge[];
+}
+
+// 🎁 LOOT SYSTEM TYPES
+export type LootRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type LootType = 'tip' | 'exercise' | 'theme' | 'xp_boost' | 'mystery';
+
+export interface LootItem {
+  id: string;
+  name: string;
+  description: string;
+  type: LootType;
+  rarity: LootRarity;
+  icon: string;
+  value?: any;
+}
+
+export interface MysteryChest {
+  id: string;
+  name: string;
+  requiredLevel?: number;
+  possibleLoot: LootItem[];
+}
+
+export interface UnlockedLoot extends LootItem {
+  unlockedOn: string; // "YYYY-MM-DD"
+  used: boolean;
 }

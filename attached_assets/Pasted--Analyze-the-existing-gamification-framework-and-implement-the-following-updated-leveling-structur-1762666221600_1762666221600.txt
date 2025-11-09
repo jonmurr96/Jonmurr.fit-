@@ -1,0 +1,77 @@
+🔁 Analyze the existing gamification framework and implement the following updated leveling structure and progression mechanics to enhance engagement, retention, and user addiction.
+
+🎮 Level System Overhaul:
+	1.	Replace the tier names (Beginner, Intermediate, etc.) with fitness-culture-aligned rank titles:
+
+	•	Levels 1–10 → Newbie
+	•	Levels 11–25 → Rookie
+	•	Levels 26–40 → Unit
+	•	Levels 41–60 → Gym Rat
+	•	Levels 61–80 → Gym Addict
+	•	Levels 81–100 → Bodybuilder
+
+	2.	Always show both the rank and level together, like:
+
+	•	"Rookie – Level 17" or "Gym Addict – Level 76"
+
+	3.	Implement a total of 100 levels:
+
+	•	Make early levels (1–10) fast and rewarding to encourage onboarding momentum.
+	•	Scale difficulty and XP requirements progressively to make later levels feel like a grind.
+	•	Use an exponential or polynomial XP curve (e.g., XP required = baseXP * level^1.3 or similar).
+
+	4.	Add XP progress bar and animation to:
+
+	•	Show progress visually after every XP-triggering action.
+	•	Use haptic/vibration feedback on level-up (mobile).
+
+	5.	Let each rank unlock tier-specific perks (modular system):
+
+	•	UI color themes
+	•	Badge variants
+	•	Special workouts (e.g., Gym Addict levels unlock “Beast Mode” routines)
+	•	Mystery rewards (see Loot System)
+
+⸻
+
+📈 Expand Reward Triggers:
+
+Enhance XP triggers:
+	•	+XP for using AI tools (workout or meal planning)
+	•	+XP for using barcode scanner
+	•	+XP bonus for completing full week of streaks (stackable)
+	•	+XP for reaching macro goals 3+ days in a row
+
+Use small random XP bonuses to trigger variable reward effects for psychological hooks.
+
+⸻
+
+🔥 Final Integration Instructions:
+	•	Sync all XP, level, and title data to Supabase under a new user_gamification_profile table.
+	•	Each entry includes:
+	•	user_id
+	•	xp_total
+	•	level (1–100)
+	•	rank_title (from above)
+	•	streak_count
+	•	longest_streak
+	•	unlocked_perks[]
+	•	Ensure that the leveling system works modularly with:
+	•	Workout logs
+	•	Meal logs
+	•	Water logs
+	•	Progress photo logs
+	•	Daily challenge completions
+	•	Add analytics tracking to monitor:
+	•	Which ranks users drop off at
+	•	Time between levels
+	•	Challenge completion rate
+
+⸻
+
+✅ Optional: Add “Next Unlock” Preview:
+
+On the gamification dashboard, show:
+	•	Current level + title
+	•	XP to next level
+	•	Next reward preview (e.g., “Level 30 unlocks: New Badge”)
