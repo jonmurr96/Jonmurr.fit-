@@ -374,6 +374,21 @@ export const gamificationService = {
     }
   },
 
+  async getAIUsageCount(usageType: 'workout_plan' | 'meal_plan' | 'coaching'): Promise<number> {
+    const { data, error } = await supabase
+      .from('ai_usage_log')
+      .select('id', { count: 'exact', head: false })
+      .eq('user_id', USER_ID)
+      .eq('usage_type', usageType);
+
+    if (error) {
+      console.error('Error fetching AI usage count:', error);
+      return 0;
+    }
+
+    return data?.length || 0;
+  },
+
   async getXPTransactions(limit: number = 50): Promise<any[]> {
     const { data, error } = await supabase
       .from('xp_transactions')
