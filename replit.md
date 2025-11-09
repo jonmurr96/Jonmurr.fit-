@@ -25,6 +25,30 @@ This is an AI-powered fitness tracking application built with React, TypeScript,
   - Added loading screen during data initialization
   - Implemented proper error handling for all database operations
   - Data now persists across sessions and devices
+- **Comprehensive Gamification System v2 (CORE INFRASTRUCTURE COMPLETE)**:
+  - **100-Level System**: Exponential XP curve targeting ~50k total XP at level 100
+    - 6 rank titles: Newbie (1-10), Rookie (11-25), Unit (26-40), Gym Rat (41-60), Gym Addict (61-80), Bodybuilder (81-100)
+    - Mathematically verified progression: Level 2=9 XP, Level 50=472 XP, Level 100=1,093 XP per level
+    - Perk system with 20+ level-based unlocks (themes, features, bonuses)
+  - **Expanded Badge System**: 45+ badges across 8 categories
+    - Workout (8), Nutrition (8), Hydration (3), Streaks (7), Progress (4), AI Usage (4), Challenges (4), Milestones (7)
+    - Event-driven badge evaluation for performance
+  - **Loot/Rewards System**: Mystery chests with weighted random rewards
+    - 13 loot items across 4 rarity tiers (common 50%, rare 30%, epic 15%, legendary 5%)
+    - Unlocked at milestone levels (5, 10, 15, 20, 25, etc.)
+    - Types: exclusive tips, exercises, UI themes, XP boosts
+  - **Enhanced Challenge System**: Weekly, monthly, and recovery challenges
+    - Weekly: 6 types (rotate 3 per week)
+    - Monthly: 3 types for long-term goals
+    - Recovery challenges when streaks break
+  - **Database Schema v2**: Created migration_gamification_v2.sql
+    - user_gamification_profile table (numeric_level, rank_title, total_xp, perks_unlocked, xp_multiplier)
+    - loot_inventory table (tracks unlocked items)
+    - challenge_progress table (historical analytics)
+    - ai_usage_log table (tracks AI feature usage)
+    - xp_transactions table (audit log for debugging)
+  - **⚠️ STATUS**: Core infrastructure complete but NOT YET integrated into App.tsx, services, or UI
+  - **NEXT STEPS**: Integrate XP triggers, update services, build gamification dashboard, add visual feedback
 
 ## Project Architecture
 
