@@ -129,6 +129,8 @@ export const mealService = {
         carbs: macros.carbs,
         fat: macros.fat,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,date'
       });
 
     if (error) {

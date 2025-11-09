@@ -6,6 +6,8 @@ import { generateWorkoutPlan, generateMealPlan } from './services/geminiService'
 import { userService, mealService, workoutService, progressService, mealPlanService } from './services/database';
 import { useGamification } from './hooks/useGamification';
 import { GamificationFeedback } from './components/gamification/GamificationFeedback';
+import { checkDatabaseHealth } from './services/database/healthCheck';
+import SetupModal from './components/SetupModal';
 
 
 // Lazy load screen components for better performance
@@ -106,6 +108,7 @@ const App: React.FC = () => {
     const [activeScreen, setActiveScreen] = useState<Screen>('home');
     const [user, setUser] = useState<UserProfile>(MOCK_USER);
     const [isInitializing, setIsInitializing] = useState(true);
+    const [showSetupModal, setShowSetupModal] = useState(false);
     
     const [meals, setMeals] = useStickyState<Meal[]>([], 'jonmurrfit-meals');
     const [macroTargets, setMacroTargets] = useStickyState<MacroTargets>(INITIAL_MOCK_TARGETS, 'jonmurrfit-macroTargets');
@@ -159,6 +162,14 @@ const App: React.FC = () => {
     useEffect(() => {
         const initializeFromDatabase = async () => {
             try {
+                const healthCheck = await checkDatabaseHealth();
+                
+                if (healthCheck.missingTables) {
+                    setShowSetupModal(true);
+                    setIsInitializing(false);
+                    return;
+                }
+                
                 const todayDate = new Date().toISOString().split('T')[0];
                 
                 const profile = await userService.getProfile();
@@ -210,6 +221,21 @@ const App: React.FC = () => {
 
         initializeFromDatabase();
     }, []);
+
+    const handleRetrySetup = async () => {
+        setShowSetupModal(false);
+        setIsInitializing(true);
+        
+        const healthCheck = await checkDatabaseHealth();
+        
+        if (healthCheck.missingTables) {
+            setShowSetupModal(true);
+            setIsInitializing(false);
+            return;
+        }
+        
+        window.location.reload();
+    };
 
     // Note: Date-based meal clearing removed - now handled by Supabase getMealsForDate() filter
 
@@ -299,18 +325,26 @@ const App: React.FC = () => {
         }
     }, [setMeals, awardXpWithContext, updateStreak, meals.length]);
     
-    const removeFoodItem = useCallback((mealId: string, itemIndex: number) => {
-        setMeals(prevMeals => {
-            const newMeals = prevMeals.map(meal => {
-                if (meal.id === mealId) {
-                    const newItems = meal.items.filter((_, index) => index !== itemIndex);
-                    return { ...meal, items: newItems };
-                }
-                return meal;
-            });
-            return newMeals.filter(meal => meal.items.length > 0);
-        });
-    }, [setMeals]);
+    const removeFoodItem = useCallback(async (mealId: string, itemIndex: number) => {
+        try {
+            const meal = meals.find(m => m.id === mealId);
+            if (!meal) return;
+            
+            const newItems = meal.items.filter((_, index) => index !== itemIndex);
+            
+            if (newItems.length === 0) {
+                await mealService.deleteMeal(mealId, meal.timestamp);
+                setMeals(prevMeals => prevMeals.filter(m => m.id !== mealId));
+            } else {
+                await mealService.deleteMeal(mealId, meal.timestamp);
+                const updatedMealData = { type: meal.type, items: newItems, timestamp: meal.timestamp };
+                const savedMeal = await mealService.addMeal(updatedMealData);
+                setMeals(prevMeals => prevMeals.map(m => m.id === mealId ? savedMeal : m));
+            }
+        } catch (error) {
+            console.error('Error removing food item:', error);
+        }
+    }, [meals, setMeals]);
     
     const addQuickAddMeal = useCallback((item: { name: string, calories: number, protein: number, carbs: number, fat: number }) => {
         const newFoodItem: FoodItem = { ...item, quantity: 1, unit: 'serving' };
@@ -459,6 +493,7 @@ const App: React.FC = () => {
 
     return (
         <div className="max-w-lg mx-auto bg-black min-h-screen font-sans">
+            {showSetupModal && <SetupModal onRetry={handleRetrySetup} />}
             <main className="h-full">
                 <Suspense fallback={<ScreenLoader />}>
                     {renderScreen()}
