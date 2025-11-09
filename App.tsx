@@ -184,13 +184,11 @@ const App: React.FC = () => {
                 const weights = await progressService.getWeightLogs();
                 setWeightLogs(weights);
 
-                const waterLog = await progressService.getWaterLog(todayDate);
-                setWaterLogs([waterLog]);
+                const allWaterLogs = await progressService.getAllWaterLogs();
+                setWaterLogs(allWaterLogs);
 
                 const gamificationState = await gamificationService.getGamificationState();
-                if (gamificationState.xp > 0 || gamificationState.earnedBadges.length > 0) {
-                    setGamificationData(gamificationState);
-                }
+                setGamificationData(gamificationState);
 
                 const quickMeals = await mealService.getQuickAddMeals();
                 if (quickMeals.length > 0) {

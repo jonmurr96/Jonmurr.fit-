@@ -55,6 +55,24 @@ export const progressService = {
     };
   },
 
+  async getAllWaterLogs(): Promise<WaterLog[]> {
+    const { data, error } = await supabase
+      .from('water_logs')
+      .select('*')
+      .eq('user_id', USER_ID)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching water logs:', error);
+      return [];
+    }
+
+    return (data || []).map((log: any) => ({
+      date: log.date,
+      intake: log.intake_oz,
+    }));
+  },
+
   async updateWaterLog(date: string, intakeOz: number): Promise<void> {
     const { error } = await supabase
       .from('water_logs')
