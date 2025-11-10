@@ -4,7 +4,7 @@
 -- Create daily_activity_summary table
 CREATE TABLE IF NOT EXISTS daily_activity_summary (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL DEFAULT 'default_user',
     date DATE NOT NULL,
     
     -- Activity tracking
@@ -42,8 +42,8 @@ ALTER TABLE daily_activity_summary ENABLE ROW LEVEL SECURITY;
 -- RLS Policy: Users can only access their own activity summaries
 CREATE POLICY daily_activity_user_policy ON daily_activity_summary
     FOR ALL
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    USING (user_id = 'default_user')
+    WITH CHECK (user_id = 'default_user');
 
 -- Function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_daily_activity_timestamp()
@@ -62,7 +62,7 @@ CREATE TRIGGER update_daily_activity_timestamp_trigger
 
 -- Helper function to upsert daily activity
 CREATE OR REPLACE FUNCTION upsert_daily_activity(
-    p_user_id UUID,
+    p_user_id TEXT,
     p_date DATE,
     p_workout_logged BOOLEAN DEFAULT NULL,
     p_meals_logged INTEGER DEFAULT NULL,
