@@ -4,6 +4,8 @@ import { WeightLog, DailyLog, MacroDayTarget, UserProfile, PhotoBundle, PhotoAng
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ReferenceLine } from 'recharts';
 import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, CameraIcon, ArrowsRightLeftIcon, ListIcon, ChartBarIconOutline, TrophyIcon, FireIcon, PlusIcon } from '../components/Icons';
 import { ALL_BADGES } from '../utils/gamification';
+import { FullHeatMap } from '../components/heatmap/FullHeatMap';
+import { useHeatMap } from '../hooks/useHeatMap';
 
 type WeightUnit = 'kg' | 'lbs';
 type WaterUnit = 'oz' | 'ml';
@@ -795,14 +797,15 @@ const AchievementsView: React.FC<{ gamificationData: GamificationState; levelInf
 );
 
 const ProgressTabs: React.FC<{
-  activeTab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements';
-  setActiveTab: (tab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements') => void;
+  activeTab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements' | 'heatmap';
+  setActiveTab: (tab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements' | 'heatmap') => void;
 }> = ({ activeTab, setActiveTab }) => {
     const tabs = [
         { id: 'summary' as const, label: 'Summary', icon: <ListIcon className="w-5 h-5" /> },
         { id: 'weight' as const, label: 'Weight', icon: <ChartBarIconOutline className="w-5 h-5" /> },
         { id: 'photos' as const, label: 'Photos', icon: <CameraIcon className="w-5 h-5" /> },
         { id: 'water' as const, label: 'Water', icon: <WaterDropIcon className="w-5 h-5" /> },
+        { id: 'heatmap' as const, label: 'Activity', icon: <FireIcon className="w-5 h-5" /> },
         { id: 'achievements' as const, label: 'Achievements', icon: <TrophyIcon className="w-5 h-5" /> },
     ];
     return (
@@ -856,7 +859,9 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   const [isLoggingWeight, setIsLoggingWeight] = useState(false);
   const [isEditingWaterGoal, setIsEditingWaterGoal] = useState(false);
   const [isAddingCustomWater, setIsAddingCustomWater] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summary' | 'weight' | 'photos' | 'water' | 'achievements'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'weight' | 'photos' | 'water' | 'achievements' | 'heatmap'>('summary');
+  
+  const { heatMapData } = useHeatMap(user.id, 90);
   
   const handleSaveWeight = useCallback((newWeightKg: number, newGoalKg: number) => {
     const today = new Date().toISOString().split('T')[0];
@@ -913,6 +918,17 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
                 <WaterTrendChartCard logs={waterLogs} goal={waterGoal} unit={waterUnit} />
                 <HydrationStreakCard logs={waterLogs} goal={waterGoal} />
             </div>
+        </div>
+      )}
+      {activeTab === 'heatmap' && (
+        <div className="space-y-6">
+          <div className="bg-zinc-900 rounded-2xl p-6">
+            <h2 className="text-xl font-bold mb-4">Daily Activity Calendar</h2>
+            <p className="text-zinc-400 text-sm mb-6">
+              Track your consistency across workouts, meals, and hydration. Tap any day to see details.
+            </p>
+            <FullHeatMap days={heatMapData} />
+          </div>
         </div>
       )}
       {activeTab === 'achievements' && <AchievementsView gamificationData={gamificationData} levelInfo={levelInfo} />}

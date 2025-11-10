@@ -21,12 +21,11 @@ const getColorClasses = (day: HeatMapDay, filter: FilterType): string => {
   if (filter === 'meals' && !hasMeal) return 'bg-zinc-800 border-zinc-700';
   if (filter === 'water' && !hasWater) return 'bg-zinc-800 border-zinc-700';
 
-  if (day.is_rest_day) return 'bg-blue-500/40 border-blue-400';
+  if (day.is_rest_day || day.level === 'rest') return 'bg-blue-500/40 border-blue-400';
   if (day.level === 'perfect') return 'bg-gradient-to-br from-purple-500 to-pink-500 border-purple-400 shadow-lg shadow-purple-500/50';
   if (day.level === 'complete') return 'bg-green-500/80 border-green-400';
-  if (day.level === 'moderate') return 'bg-green-500/60 border-green-500';
-  if (day.level === 'low') return 'bg-orange-500/60 border-orange-400';
-  if (day.level === 'rest') return 'bg-blue-500/40 border-blue-400';
+  if (day.level === 'moderate') return 'bg-orange-500/60 border-orange-400';
+  if (day.level === 'low') return 'bg-red-500/60 border-red-400';
   
   return 'bg-zinc-800 border-zinc-700';
 };
