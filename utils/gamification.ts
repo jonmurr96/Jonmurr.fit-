@@ -185,6 +185,11 @@ export const ALL_BADGES: Badge[] = [
   { id: 'consistency_champion', name: 'Consistency Champion', description: 'Build unstoppable habits through daily commitment', category: 'Consistency', icon: '🔥', tiers: createTiers(3, 7, 14, 30), metricType: 'streak' },
   { id: 'comeback_kid', name: 'Comeback Kid', description: 'Restarted your streak after a break - resilience wins!', category: 'Consistency', icon: '💫', tiers: createBooleanTier(), metricType: 'boolean' },
   
+  // 📅 HEAT MAP ACTIVITY BADGES
+  { id: 'green_week', name: 'Green Week', description: 'Achieve 7 consecutive complete days (all 3 activities)', category: 'Consistency', icon: '🟢', tiers: createTiers(7, 21, 49, 98), metricType: 'streak' },
+  { id: 'perfect_day_pro', name: 'Perfect Day Pro', description: 'Achieve perfect days (all activities + macros) consistently', category: 'Consistency', icon: '💎', tiers: createTiers(1, 5, 15, 30), metricType: 'count' },
+  { id: 'activity_master', name: 'Activity Master', description: 'Maintain daily activity streaks without missing a day', category: 'Consistency', icon: '⚡', tiers: createTiers(7, 14, 30, 60), metricType: 'streak' },
+  
   // 📸 PROGRESS TRACKING BADGES
   { id: 'progress_tracker', name: 'Progress Tracker', description: 'Document your transformation journey with progress logs', category: 'Progress', icon: '📷', tiers: createTiers(1, 5, 15, 30), metricType: 'count' },
   { id: 'weight_logger', name: 'Weight Logger', description: 'Track your weight consistently for better results', category: 'Progress', icon: '⚖️', tiers: createTiers(5, 15, 30, 90), metricType: 'count' },
