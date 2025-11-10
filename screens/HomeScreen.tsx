@@ -575,10 +575,6 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
 
       <XPBar gamificationData={gamificationData} levelInfo={levelInfo} setActiveScreen={setActiveScreen} />
 
-      <div className="bg-zinc-900 rounded-2xl p-6">
-        <MiniHeatMap days={heatMapData} onDayClick={() => setActiveScreen('progress')} />
-      </div>
-
       <div className="bg-zinc-900 rounded-2xl p-6 flex flex-col items-center relative">
         <button onClick={() => setIsEditingMacros(true)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10" aria-label="Edit macro goals">
             <PencilIcon className="w-5 h-5" />
@@ -752,6 +748,10 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
                 );
             }
         })()}
+      </div>
+
+      <div className="bg-zinc-900 rounded-2xl p-6">
+        <MiniHeatMap days={heatMapData} onDayClick={() => setActiveScreen('progress')} />
       </div>
     </div>
   );
