@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { DailyMacros, MacroDayTarget, UserProfile, Workout, DailyLog, Meal, Screen, MacroTargets, SavedWorkout, TrainingProgram, WorkoutHistory, GamificationState, LevelInfo, Challenge } from '../types';
 import { ArrowsRightLeftIcon, PencilIcon, ChevronRightIcon, PinIcon, TrophyIcon, ArrowLeftIcon, FireIcon } from '../components/Icons';
+import { MiniHeatMap } from '../components/heatmap/MiniHeatMap';
+import { useHeatMap } from '../hooks/useHeatMap';
 
 interface HomeScreenProps {
   user: UserProfile;
@@ -502,6 +504,8 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
 
   const [goalView, setGoalView] = useState<'rest' | 'training'>(activeGoalType);
   const displayedTargets = macroTargets[goalView];
+
+  const { heatMapData } = useHeatMap(user.id, 14);
   
   useEffect(() => {
     const newActiveGoalType = autoAdjustMacros && isTrainingDay ? 'training' : 'rest';
@@ -570,6 +574,10 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
       />
 
       <XPBar gamificationData={gamificationData} levelInfo={levelInfo} setActiveScreen={setActiveScreen} />
+
+      <div className="bg-zinc-900 rounded-2xl p-6">
+        <MiniHeatMap days={heatMapData} onDayClick={() => setActiveScreen('progress')} />
+      </div>
 
       <div className="bg-zinc-900 rounded-2xl p-6 flex flex-col items-center relative">
         <button onClick={() => setIsEditingMacros(true)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10" aria-label="Edit macro goals">
