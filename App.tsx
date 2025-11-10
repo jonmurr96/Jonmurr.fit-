@@ -264,14 +264,20 @@ const App: React.FC = () => {
                 return newLogs;
             });
 
-            // Count water days EXCLUDING today, then add today if it meets goal
-            const waterDaysExcludingToday = waterLogs.filter(log => 
-                log.date !== todayStr && log.intake >= waterGoal
-            ).length;
+            const lastWaterXpDate = localStorage.getItem('jonmurrfit-lastWaterXpAward');
+            const isFirstLogToday = lastWaterXpDate !== todayStr;
             
-            await awardXpWithContext(10, 'Logged water intake', 'water_log', {
-                waterDays: waterDaysExcludingToday + (newIntake >= waterGoal ? 1 : 0)
-            });
+            if (isFirstLogToday && newIntake > 0) {
+                const waterDaysExcludingToday = waterLogs.filter(log => 
+                    log.date !== todayStr && log.intake >= waterGoal
+                ).length;
+                
+                await awardXpWithContext(10, 'Logged water intake', 'water_log', {
+                    waterDays: waterDaysExcludingToday + (newIntake >= waterGoal ? 1 : 0)
+                });
+                
+                localStorage.setItem('jonmurrfit-lastWaterXpAward', todayStr);
+            }
             
             if(oldIntake < waterGoal && newIntake >= waterGoal) {
                 await updateStreak('water');

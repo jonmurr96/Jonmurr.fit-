@@ -9,11 +9,15 @@ None documented yet - this is a fresh import.
 ## Recent Changes (Nov 9, 2025)
 
 ### XP Toast Bug Fix (Latest - Nov 9, 2025 @ 8:57 PM)
-- **🐛 Fixed Stuck XP Toast**: Resolved issue where "+0 XP" toast wouldn't dismiss
-  - Root cause: App was awarding 0 XP for "Check protein badge" when protein goal was hit
-  - Changed to award 25 XP for "Hit protein goal" instead of 0 XP for badge check
-  - Toast now displays meaningful reward and auto-dismisses after 3 seconds
-  - Users now get rewarded for achieving protein goals (once per day)
+- **🐛 Fixed Stuck XP Toast**: Resolved issue where XP toasts wouldn't dismiss and blocked screen
+  - **Root Cause**: Water logging awarded 10 XP on EVERY slider adjustment, creating endless toast queue
+  - **The Fix**: Added daily guard for water XP (only awards once per day on first log)
+  - **How It Works**: Uses `jonmurrfit-lastWaterXpAward` localStorage check (same pattern as protein/macro goals)
+  - **Result**: Toasts now properly auto-dismiss after 3 seconds, no more blocking screen
+- **🎯 Additional XP Fixes**:
+  - Changed protein goal from 0 XP to 25 XP for meaningful rewards
+  - All daily XP awards now have proper guards: water (10 XP), protein goal (25 XP), macro goals (50 XP)
+  - Toast queue system confirmed working - each toast dismisses after timeout, queue advances properly
 
 ### Workout Status System Implementation (Nov 9, 2025 @ 6:05 PM)
 - **🏷️ Status Tagging System**: Implemented Active/Inactive/Draft workflow status system
