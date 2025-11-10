@@ -378,7 +378,7 @@ const WaterTrackerCard: React.FC<{
                         <circle className="text-sky-400 transition-all duration-500" strokeWidth="6" strokeDasharray={circumference} strokeDashoffset={circumference - (percentage / 100) * circumference} strokeLinecap="round" transform="rotate(-90 40 40)" stroke="currentColor" fill="transparent" r={radius} cx="40" cy="40" />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <WaterDropIcon className="w-6 h-6 text-sky-400" />
+                        <span className="text-2xl">💧</span>
                         <p className="text-xs text-zinc-400 mt-1">{Math.round(percentage)}%</p>
                     </div>
                 </div>
