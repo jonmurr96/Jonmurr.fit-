@@ -6,6 +6,9 @@ import { WaterDropIcon, PencilIcon, ChevronRightIcon, SelfieIcon, TrashIcon, Cam
 import { ALL_BADGES } from '../utils/gamification';
 import { FullHeatMap } from '../components/heatmap/FullHeatMap';
 import { useHeatMap } from '../hooks/useHeatMap';
+import { ScrollSpyProvider } from '../components/progress/ScrollSpyContext';
+import { ProgressSection } from '../components/progress/ProgressSection';
+import { StickySectionChips } from '../components/progress/StickySectionChips';
 
 type WeightUnit = 'kg' | 'lbs';
 type WaterUnit = 'oz' | 'ml';
@@ -796,35 +799,7 @@ const AchievementsView: React.FC<{ gamificationData: GamificationState; levelInf
     </div>
 );
 
-const ProgressTabs: React.FC<{
-  activeTab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements' | 'heatmap';
-  setActiveTab: (tab: 'summary' | 'weight' | 'photos' | 'water' | 'achievements' | 'heatmap') => void;
-}> = ({ activeTab, setActiveTab }) => {
-    const tabs = [
-        { id: 'summary' as const, label: 'Summary', icon: <ListIcon className="w-5 h-5" /> },
-        { id: 'weight' as const, label: 'Weight', icon: <ChartBarIconOutline className="w-5 h-5" /> },
-        { id: 'photos' as const, label: 'Photos', icon: <CameraIcon className="w-5 h-5" /> },
-        { id: 'water' as const, label: 'Water', icon: <WaterDropIcon className="w-5 h-5" /> },
-        { id: 'heatmap' as const, label: 'Activity', icon: <FireIcon className="w-5 h-5" /> },
-        { id: 'achievements' as const, label: 'Achievements', icon: <TrophyIcon className="w-5 h-5" /> },
-    ];
-    return (
-        <div className="flex justify-around bg-zinc-900 p-2 rounded-xl">
-        {tabs.map(tab => (
-            <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    activeTab === tab.id ? 'bg-green-500 text-black' : 'text-zinc-400 hover:bg-zinc-800'
-                }`}
-            >
-                {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-        ))}
-        </div>
-    );
-};
+// Removed ProgressTabs component - now using scroll spy navigation
 
 const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   user,
@@ -859,7 +834,6 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   const [isLoggingWeight, setIsLoggingWeight] = useState(false);
   const [isEditingWaterGoal, setIsEditingWaterGoal] = useState(false);
   const [isAddingCustomWater, setIsAddingCustomWater] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summary' | 'weight' | 'photos' | 'water' | 'achievements' | 'heatmap'>('summary');
   
   const { heatMapData } = useHeatMap(user.id, 90);
   
@@ -892,52 +866,57 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   }, [setWaterIntake]);
 
   return (
-    <div className="p-4 space-y-6 text-white pb-24">
-      <h1 className="text-3xl font-bold">Progress</h1>
-      
-      <ProgressTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-      
-      {activeTab === 'summary' && (
-          <div className="space-y-6">
+    <ScrollSpyProvider>
+      <div className="p-4 space-y-6 text-white pb-24">
+        <h1 className="text-3xl font-bold">Progress Hub</h1>
+        
+        <StickySectionChips />
+        
+        <div className="space-y-8 mt-6">
+          <ProgressSection id="summary" label="Summary" icon={<ListIcon className="w-5 h-5" />}>
             <WeightGoalCard currentWeightKg={currentWeightKg} weightGoalKg={weightGoalKg} onLogWeight={() => setIsLoggingWeight(true)} unit={weightUnit} setUnit={setWeightUnit} />
             <StreakCard dailyLogs={dailyLogs} targets={macroTargets} />
             <WaterTrackerCard intake={waterIntake} goal={waterGoal} onAddWater={handleAddWater} onEditGoal={() => setIsEditingWaterGoal(true)} unit={waterUnit} setUnit={setWaterUnit} onAddCustom={() => setIsAddingCustomWater(true)} />
-          </div>
-      )}
-      {activeTab === 'weight' && (
-        <div className="space-y-6">
+          </ProgressSection>
+
+          <ProgressSection id="weight" label="Weight" icon={<ChartBarIconOutline className="w-5 h-5" />}>
             <WeightGoalCard currentWeightKg={currentWeightKg} weightGoalKg={weightGoalKg} onLogWeight={() => setIsLoggingWeight(true)} unit={weightUnit} setUnit={setWeightUnit} />
             <WeightTrendCard weightLogs={weightLogs} unit={weightUnit} goalKg={weightGoalKg} />
-        </div>
-      )}
-      {activeTab === 'photos' && <ProgressPhotosCard photos={photos} setPhotos={setPhotos} awardXp={awardXp} unlockBadge={unlockBadge}/>}
-      {activeTab === 'water' && (
-        <div className="space-y-6">
-            <WaterTrackerCard intake={waterIntake} goal={waterGoal} onAddWater={handleAddWater} onEditGoal={() => setIsEditingWaterGoal(true)} unit={waterUnit} setUnit={setWaterUnit} onAddCustom={() => setIsAddingCustomWater(true)} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <WaterTrendChartCard logs={waterLogs} goal={waterGoal} unit={waterUnit} />
-                <HydrationStreakCard logs={waterLogs} goal={waterGoal} />
-            </div>
-        </div>
-      )}
-      {activeTab === 'heatmap' && (
-        <div className="space-y-6">
-          <div className="bg-zinc-900 rounded-2xl p-6">
-            <h2 className="text-xl font-bold mb-4">Daily Activity Calendar</h2>
-            <p className="text-zinc-400 text-sm mb-6">
-              Track your consistency across workouts, meals, and hydration. Tap any day to see details.
-            </p>
-            <FullHeatMap days={heatMapData} />
-          </div>
-        </div>
-      )}
-      {activeTab === 'achievements' && <AchievementsView gamificationData={gamificationData} levelInfo={levelInfo} />}
+          </ProgressSection>
 
-      {isLoggingWeight && <LogWeightModal currentWeightKg={currentWeightKg} goalKg={weightGoalKg} onSave={handleSaveWeight} onClose={() => setIsLoggingWeight(false)} unit={weightUnit} setUnit={setWeightUnit} />}
-      {isEditingWaterGoal && <EditWaterGoalModal currentGoal={waterGoal} onSave={(g) => { setWaterGoal(g); setIsEditingWaterGoal(false); }} onClose={() => setIsEditingWaterGoal(false)} unit={waterUnit} />}
-      {isAddingCustomWater && <AddCustomWaterModal onSave={(amount) => handleAddWater(amount)} onClose={() => setIsAddingCustomWater(false)} unit={waterUnit} />}
-      {celebrationMilestone && <CelebrationModal milestone={celebrationMilestone} onClose={() => setCelebrationMilestone(null)} />}
-    </div>
+          <ProgressSection id="water" label="Water" icon={<WaterDropIcon className="w-5 h-5" />}>
+            <WaterTrackerCard intake={waterIntake} goal={waterGoal} onAddWater={handleAddWater} onEditGoal={() => setIsEditingWaterGoal(true)} unit={waterUnit} setUnit={setWaterUnit} onAddCustom={() => setIsAddingCustomWater(true)} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <WaterTrendChartCard logs={waterLogs} goal={waterGoal} unit={waterUnit} />
+              <HydrationStreakCard logs={waterLogs} goal={waterGoal} />
+            </div>
+          </ProgressSection>
+
+          <ProgressSection id="heatmap" label="Activity" icon={<FireIcon className="w-5 h-5" />}>
+            <div className="bg-zinc-900 rounded-2xl p-6">
+              <h3 className="text-lg font-bold mb-2">Daily Activity Calendar</h3>
+              <p className="text-zinc-400 text-sm mb-6">
+                Track your consistency across workouts, meals, and hydration. Tap any day to see details.
+              </p>
+              <FullHeatMap days={heatMapData} />
+            </div>
+          </ProgressSection>
+
+          <ProgressSection id="photos" label="Photos" icon={<CameraIcon className="w-5 h-5" />}>
+            <ProgressPhotosCard photos={photos} setPhotos={setPhotos} awardXp={awardXp} unlockBadge={unlockBadge}/>
+          </ProgressSection>
+
+          <ProgressSection id="achievements" label="Rewards" icon={<TrophyIcon className="w-5 h-5" />}>
+            <AchievementsView gamificationData={gamificationData} levelInfo={levelInfo} />
+          </ProgressSection>
+        </div>
+
+        {isLoggingWeight && <LogWeightModal currentWeightKg={currentWeightKg} goalKg={weightGoalKg} onSave={handleSaveWeight} onClose={() => setIsLoggingWeight(false)} unit={weightUnit} setUnit={setWeightUnit} />}
+        {isEditingWaterGoal && <EditWaterGoalModal currentGoal={waterGoal} onSave={(g) => { setWaterGoal(g); setIsEditingWaterGoal(false); }} onClose={() => setIsEditingWaterGoal(false)} unit={waterUnit} />}
+        {isAddingCustomWater && <AddCustomWaterModal onSave={(amount) => handleAddWater(amount)} onClose={() => setIsAddingCustomWater(false)} unit={waterUnit} />}
+        {celebrationMilestone && <CelebrationModal milestone={celebrationMilestone} onClose={() => setCelebrationMilestone(null)} />}
+      </div>
+    </ScrollSpyProvider>
   );
 };
 
