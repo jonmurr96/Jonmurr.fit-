@@ -1,0 +1,116 @@
+Perfect — here’s a complete, modular AIStudio prompt that implements the Heat Map System using the recommended dual-placement approach:
+
+⸻
+
+✅ Prompt: Heat Map System (Mini on Home + Full on Progress)
+
+⸻
+
+Objective:
+Implement a dynamic Heat Map System that visualizes user activity (workouts, meals, hydration) using a color-coded calendar interface.
+
+Use a two-part UI strategy:
+	•	📍 Mini Preview Heatmap on Home
+	•	📈 Full Heatmap with Filters on Progress Tab
+
+⸻
+
+🔁 Heat Map Logic:
+
+Each day is colored based on the user’s activity level:
+
+Color	Meaning
+⚫ Gray	No activity logged
+🔴 Red	Low activity (1 item logged: workout OR food OR water)
+🟠 Orange	Moderate activity (2 of 3 logged)
+🟢 Green	Full day completed (all 3 logged)
+💎 Diamond	Perfect day (hit macro goals, workout, hydration)
+🟦 Blue	Intentional rest day (if user selects it)
+
+
+⸻
+
+🏠 HOME SCREEN VERSION: Mini Heat Map (7–14 Days)
+	•	Position: Under welcome message or streak area
+	•	Display a horizontal scrollable strip of the last 7–14 days
+	•	Visualize each day with:
+	•	Colored dot or small square
+	•	Tap = open full Heat Map in Progress tab
+	•	Include mini-legend icon:
+e.g. 🟢 = All goals hit
+
+Purpose: Visual cue to motivate daily consistency
+
+⸻
+
+📊 PROGRESS TAB VERSION: Full Heat Map Calendar
+	•	Show full month view with square grid calendar (similar to GitHub heatmaps)
+	•	Toggle filters to show:
+	•	Workouts Only
+	•	Nutrition Only
+	•	Hydration Only
+	•	All Combined (default)
+	•	Tap on a day = open detailed activity log for that day
+	•	Show summary below calendar:
+	•	“This month: 22 active days, 6 green days, 2 perfect 💎 days”
+	•	Add option to switch months (back 3–6 months)
+
+⸻
+
+🧠 Functionality to Include
+	•	Tracks:
+	•	workoutLogged (bool)
+	•	mealsLogged (>= 2 meals)
+	•	hydrationGoalMet (bool or %)
+	•	macrosGoalMet (optional, for 💎)
+	•	Backend stores data per day in new daily_activity_summary table:
+
+{
+  user_id: uuid,
+  date: "2025-11-08",
+  workout_logged: true,
+  meals_logged: 3,
+  water_intake_oz: 80,
+  goal_water_oz: 100,
+  hit_macros: true,
+  is_rest_day: false
+}
+
+
+⸻
+
+🔥 Gamification Integration:
+	•	Logging 3+ green days = XP bonus
+	•	Earn badge: “Green Week” for 7 consecutive green days
+	•	💎 days count toward exclusive badge: “Perfectionist”
+	•	Broken streak triggers Reignite Challenge
+	•	Display current streak beneath the heatmap
+
+⸻
+
+🎨 Design Notes:
+	•	Mobile-first layout
+	•	Color palette should use vibrant but accessible shades
+	•	Match app’s theme — green for success, red/yellow for alerts
+	•	Add subtle animations on color change (e.g. pulse on streak continuation)
+	•	Use tooltips or tap-hold to show what was completed on each day
+
+⸻
+
+🔧 Optional Features:
+	•	Toggle on Home screen:
+“Show heat map preview” [on/off] in user settings
+	•	Export full heat map as PNG or PDF (under Progress tab)
+	•	Add vertical bar chart below heat map to show:
+	•	Weekly activity volume
+	•	Hydration averages
+	•	Macro adherence trend
+
+⸻
+
+Let me know if you’d like:
+	•	Figma-ready wireframe prompt
+	•	Supabase table schema for daily_activity_summary
+	•	Frontend implementation code (React Native, Flutter, SwiftUI, etc.)
+
+Ready to expand this into your full Progress & Habit UI!
