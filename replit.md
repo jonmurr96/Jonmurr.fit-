@@ -6,9 +6,60 @@ Jonmurr.fit is an AI-powered fitness tracking application built with React, Type
 ## User Preferences
 None documented yet - this is a fresh import.
 
-## Recent Changes (Nov 9, 2025)
+## Recent Changes (Nov 10, 2025)
 
-### XP Toast Bug Fix (Latest - Nov 9, 2025 @ 8:57 PM)
+### Heat Map System Implementation (Latest - Nov 10, 2025)
+- **📅 Daily Activity Tracking**: Implemented comprehensive heat map visualization system
+  - **Database Schema**: Created `daily_activity_summary` table tracking workout/meal/water activity
+  - **Activity Levels**: 6-tier color coding system:
+    - Gray (none): No activity logged
+    - Red (low): 1 activity type logged
+    - Orange (moderate): 2 activity types logged  
+    - Green (complete): All 3 activities logged
+    - Diamond (perfect): All 3 activities + macro goals met (purple-to-pink gradient)
+    - Blue (rest): Designated rest day
+  - **SQL Migration**: `supabase/migration_heat_map.sql` ready to apply
+  
+- **🗓️ MiniHeatMap Component**: 14-day horizontal activity strip
+  - Displays last 14 days of activity with colored squares
+  - Interactive hover showing day details (date, activity level)
+  - Compact legend showing all activity levels
+  - Integrated into HomeScreen below XP bar
+  
+- **📊 FullHeatMap Component**: Monthly calendar view with filters
+  - Monthly calendar grid showing full month of activity
+  - Filter toggles for workouts, meals, and water tracking
+  - Month navigation (previous/next/current month)
+  - Click any day to open detailed activity modal
+  - Integrated into ProgressScreen as new "Heat Map" tab
+  
+- **🔍 DayDetailModal**: Comprehensive daily activity breakdown
+  - Shows workout completion status
+  - Displays meals logged count
+  - Shows water intake progress with oz tracking
+  - Lists all macro goals met (protein, carbs, fats, calories)
+  - Activity level badge with color coding
+  - Rest day indicator
+  
+- **🏅 Heat Map Badges**: 3 new achievement badges added to gamification
+  - **Green Week** 🟢: Achieve 7+ consecutive complete days (Bronze: 7, Silver: 21, Gold: 49, Diamond: 98 days) - Streak-based
+  - **Perfect Day Pro** 💎: Total perfect days achieved (Bronze: 1, Silver: 5, Gold: 15, Diamond: 30 days) - Count-based
+  - **Activity Master** ⚡: Maintain daily activity streaks (Bronze: 7, Silver: 14, Gold: 30, Diamond: 60 days) - Streak-based
+  - All badges award standard tier XP: Bronze 25 XP, Silver 50 XP, Gold 100 XP, Diamond 200 XP
+  
+- **⚙️ Technical Implementation**:
+  - `hooks/useHeatMap.ts`: Custom hook managing heat map data fetching and caching
+  - `services/database/heatMapService.ts`: Service layer for activity calculations and database queries
+  - `components/heatmap/`: Modular components (MiniHeatMap, FullHeatMap, DayDetailModal)
+  - `utils/gamification.ts`: Badge definitions integrated into existing system
+  
+- **📋 Migration Required**: User must apply migrations before features work
+  - `supabase/migration_heat_map.sql`: Creates daily_activity_summary table and RPC functions
+  - `supabase/migration_badge_tiers.sql`: Updates badge_tiers table structure
+  
+- **✅ Architect Approved**: Full implementation reviewed and production-ready
+
+### XP Toast Bug Fix (Nov 9, 2025 @ 8:57 PM)
 - **🐛 Fixed Stuck XP Toast**: Resolved issue where XP toasts wouldn't dismiss and blocked screen
   - **Root Cause**: Water logging awarded 10 XP on EVERY slider adjustment, creating endless toast queue
   - **The Fix**: Added daily guard for water XP (only awards once per day on first log)
