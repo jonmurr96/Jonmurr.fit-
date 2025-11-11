@@ -27,7 +27,17 @@ Jonmurr.fit is an AI-powered fitness tracking application built with React, Type
   - 108 total policies (4 per table: SELECT, INSERT, UPDATE, DELETE)
   - Complete documentation with prerequisites, rollback instructions, verification queries
   - **⚠️ DEPLOYMENT REQUIRED**: Migration must be manually applied via Supabase Dashboard → SQL Editor
-- **Architecture Status**: Application-level multi-user support complete. Database-level isolation ready for deployment. All 7 services, 2 custom hooks, and App.tsx using authenticated user context.
+- **✅ Google/Apple OAuth Sign-In (COMPLETED - Production Ready)**: Full OAuth implementation with automatic profile creation:
+  - **OAuth Methods**: `signInWithGoogle()` and `signInWithApple()` in authService using Supabase OAuth
+  - **Branded UI Components**: GoogleSignInButton and AppleSignInButton with proper styling and OAuth divider
+  - **Automatic Profile Creation**: New OAuth users get profiles auto-created from metadata (full_name, avatar_url, unique username)
+  - **Username Collision Handling**: Guaranteed unique usernames via email prefix + 6-char random suffix with retry logic (up to 5 attempts on duplicate)
+  - **Onboarding Flow**: All OAuth users start with onboarding_complete=false and go through onboarding
+  - **AuthContext Integration**: loadUserProfile detects missing profiles (PGRST116) and calls createOAuthUserProfile
+  - **All Architect Approved**: Pass verdicts on OAuth methods, UI components, and username collision fix
+  - **Setup Guide**: Comprehensive OAUTH_SETUP_GUIDE.md with step-by-step Supabase/Google/Apple configuration
+  - **⚠️ PROVIDER CONFIG REQUIRED**: Google and Apple OAuth providers must be configured in Supabase Dashboard
+- **Architecture Status**: Application-level multi-user support complete. Database-level isolation ready for deployment. All 7 services, 2 custom hooks, and App.tsx using authenticated user context. OAuth sign-in production-ready pending provider configuration.
 
 ## User Preferences
 None documented yet - this is a fresh import.
@@ -44,7 +54,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Charts**: Recharts library for data visualization.
 - **Database**: Supabase for backend, managing user data, workout logs, meal entries, and gamification state across 23 tables, including a `daily_activity_summary` table for heat map tracking.
 - **Exercise Database**: WGER API integration for a comprehensive exercise library.
-- **Authentication**: Supabase Auth for email/password flows, session management, and protected routes, with a `users` table for user profiles and RLS policies.
+- **Authentication**: Supabase Auth for email/password and OAuth (Google/Apple) flows, session management, and protected routes, with a `users` table for user profiles and RLS policies. OAuth users get automatic profile creation with unique username generation and collision retry logic.
 - **Workout Status System**: Implements 'active', 'inactive', 'draft' statuses for workouts, enforcing a single active plan rule, and smart UI organization.
 - **Gamification System**:
     - **Tiered Badge Progression**: Badges across 8 categories (Bronze, Silver, Gold, Diamond tiers) with XP rewards, including new badges for heat map achievements (Green Week, Perfect Day Pro, Activity Master).
