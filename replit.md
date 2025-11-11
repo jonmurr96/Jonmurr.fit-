@@ -12,7 +12,8 @@ Jonmurr.fit is an AI-powered fitness tracking application built with React, Type
   - `workoutService` → `createWorkoutService(userId)` - Training programs, workouts, exercises, sets, history
   - `gamificationService` → `createGamificationService(userId)` - XP, streaks, badges, challenges, loot, AI usage
 - **Refactoring Pattern**: Eliminated all `this` bindings, using closure-based functions that capture `userId` from factory scope. Private helpers (e.g., `mapProgramFromDb`, `getMetricValue`) lifted into closure scope. Each service exports both factory function and default instance for backward compatibility.
-- **Next Steps**: Create `useUserServices` hook to provide authenticated service instances throughout the app, then apply Row-Level Security (RLS) policies to all 23 Supabase tables for complete multi-user data isolation.
+- **useUserServices Hook (Completed)**: Created custom React hook (`hooks/useUserServices.ts`) that provides authenticated, user-scoped database service instances throughout the app. Uses `useMemo` for stable references, includes authentication guard, and ensures all database operations use the correct user context.
+- **Next Steps**: Update all screen components to use authenticated services from useUserServices hook, then apply Row-Level Security (RLS) policies to all 23 Supabase tables for complete multi-user data isolation.
 
 ## User Preferences
 None documented yet - this is a fresh import.
