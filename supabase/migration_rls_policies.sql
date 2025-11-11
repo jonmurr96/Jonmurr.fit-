@@ -599,28 +599,28 @@ CREATE POLICY "Users can delete own streaks"
   ON streaks FOR DELETE
   USING (auth.uid()::text = user_id);
 
--- badge_progress
-ALTER TABLE badge_progress ENABLE ROW LEVEL SECURITY;
+-- earned_badges
+ALTER TABLE earned_badges ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view own badge progress" ON badge_progress;
-CREATE POLICY "Users can view own badge progress"
-  ON badge_progress FOR SELECT
+DROP POLICY IF EXISTS "Users can view own earned badges" ON earned_badges;
+CREATE POLICY "Users can view own earned badges"
+  ON earned_badges FOR SELECT
   USING (auth.uid()::text = user_id);
 
-DROP POLICY IF EXISTS "Users can insert own badge progress" ON badge_progress;
-CREATE POLICY "Users can insert own badge progress"
-  ON badge_progress FOR INSERT
+DROP POLICY IF EXISTS "Users can insert own earned badges" ON earned_badges;
+CREATE POLICY "Users can insert own earned badges"
+  ON earned_badges FOR INSERT
   WITH CHECK (auth.uid()::text = user_id);
 
-DROP POLICY IF EXISTS "Users can update own badge progress" ON badge_progress;
-CREATE POLICY "Users can update own badge progress"
-  ON badge_progress FOR UPDATE
+DROP POLICY IF EXISTS "Users can update own earned badges" ON earned_badges;
+CREATE POLICY "Users can update own earned badges"
+  ON earned_badges FOR UPDATE
   USING (auth.uid()::text = user_id)
   WITH CHECK (auth.uid()::text = user_id);
 
-DROP POLICY IF EXISTS "Users can delete own badge progress" ON badge_progress;
-CREATE POLICY "Users can delete own badge progress"
-  ON badge_progress FOR DELETE
+DROP POLICY IF EXISTS "Users can delete own earned badges" ON earned_badges;
+CREATE POLICY "Users can delete own earned badges"
+  ON earned_badges FOR DELETE
   USING (auth.uid()::text = user_id);
 
 -- challenges
@@ -645,6 +645,30 @@ CREATE POLICY "Users can update own challenges"
 DROP POLICY IF EXISTS "Users can delete own challenges" ON challenges;
 CREATE POLICY "Users can delete own challenges"
   ON challenges FOR DELETE
+  USING (auth.uid()::text = user_id);
+
+-- challenge_progress
+ALTER TABLE challenge_progress ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own challenge progress" ON challenge_progress;
+CREATE POLICY "Users can view own challenge progress"
+  ON challenge_progress FOR SELECT
+  USING (auth.uid()::text = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own challenge progress" ON challenge_progress;
+CREATE POLICY "Users can insert own challenge progress"
+  ON challenge_progress FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id);
+
+DROP POLICY IF EXISTS "Users can update own challenge progress" ON challenge_progress;
+CREATE POLICY "Users can update own challenge progress"
+  ON challenge_progress FOR UPDATE
+  USING (auth.uid()::text = user_id)
+  WITH CHECK (auth.uid()::text = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own challenge progress" ON challenge_progress;
+CREATE POLICY "Users can delete own challenge progress"
+  ON challenge_progress FOR DELETE
   USING (auth.uid()::text = user_id);
 
 -- user_gamification_profile
