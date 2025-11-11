@@ -260,23 +260,23 @@ ALTER TABLE quick_add_meal_items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own quick add meal items" ON quick_add_meal_items;
 CREATE POLICY "Users can view own quick add meal items"
   ON quick_add_meal_items FOR SELECT
-  USING (user_owns_quick_add_meal(meal_id));
+  USING (user_owns_quick_add_meal(quick_meal_id));
 
 DROP POLICY IF EXISTS "Users can insert own quick add meal items" ON quick_add_meal_items;
 CREATE POLICY "Users can insert own quick add meal items"
   ON quick_add_meal_items FOR INSERT
-  WITH CHECK (user_owns_quick_add_meal(meal_id));
+  WITH CHECK (user_owns_quick_add_meal(quick_meal_id));
 
 DROP POLICY IF EXISTS "Users can update own quick add meal items" ON quick_add_meal_items;
 CREATE POLICY "Users can update own quick add meal items"
   ON quick_add_meal_items FOR UPDATE
-  USING (user_owns_quick_add_meal(meal_id))
-  WITH CHECK (user_owns_quick_add_meal(meal_id));
+  USING (user_owns_quick_add_meal(quick_meal_id))
+  WITH CHECK (user_owns_quick_add_meal(quick_meal_id));
 
 DROP POLICY IF EXISTS "Users can delete own quick add meal items" ON quick_add_meal_items;
 CREATE POLICY "Users can delete own quick add meal items"
   ON quick_add_meal_items FOR DELETE
-  USING (user_owns_quick_add_meal(meal_id));
+  USING (user_owns_quick_add_meal(quick_meal_id));
 
 -- generated_meal_plans
 ALTER TABLE generated_meal_plans ENABLE ROW LEVEL SECURITY;
