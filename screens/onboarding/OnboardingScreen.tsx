@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { OnboardingFormData, OnboardingStep } from '../../types/onboarding';
 import { calculateOnboardingResults, calculateAge } from '../../utils/onboardingCalculations';
 import { saveOnboardingData } from '../../services/onboardingService';
@@ -26,8 +25,7 @@ const INITIAL_FORM_DATA: Partial<OnboardingFormData> = {
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('personal_info');
   const [formData, setFormData] = useState<Partial<OnboardingFormData>>(INITIAL_FORM_DATA);
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user, refreshUserProfile } = useAuth();
 
   const handleChange = (field: keyof OnboardingFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -167,8 +165,9 @@ export default function OnboardingScreen() {
       // TODO: Generate AI workout plan here
       // const workoutPlan = await generateWorkoutPlan(formData);
       
-      // Navigate to home screen
-      navigate('/');
+      // Refresh user profile to pick up onboarding_complete flag
+      // This will trigger AppWithAuth to automatically route to main app
+      await refreshUserProfile();
     } catch (error) {
       console.error('Error during onboarding confirmation:', error);
       alert('Something went wrong. Please try again.');

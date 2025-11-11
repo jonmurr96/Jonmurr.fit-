@@ -4,6 +4,15 @@
 Jonmurr.fit is an AI-powered fitness tracking application built with React, TypeScript, and Vite. Its core purpose is to provide personalized workout planning and meal suggestions using Google's Gemini AI. The project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve their health goals. The business vision is to provide a comprehensive, engaging, and personalized fitness solution that stands out in the market by leveraging AI for tailored guidance and gamification for sustained user engagement.
 
 ## Recent Changes (November 11, 2025)
+- **✅ Smart Onboarding System (COMPLETED - Architect Approved)**: Comprehensive 5-step personalized onboarding flow for new users:
+  - **Multi-Step UI**: PersonalInfo → FitnessGoals → BodyType → WorkoutPreferences → DietLifestyle → Smart Summary (with progress indicators and validation)
+  - **Scientific Calculations**: BMR using Mifflin-St Jeor equation, TDEE with activity multipliers, goal-based calorie adjustments, macro distribution algorithms, water intake based on weight/activity
+  - **Smart Summary**: Displays personalized daily calories, macros (protein/carbs/fats), water intake, BMR, TDEE, and workout plan preview
+  - **Database Integration**: user_onboarding_data table stores all questionnaire responses and calculated results, onboarding_complete flag controls routing
+  - **Automatic Routing**: AppWithAuth checks onboarding_complete and routes new users to onboarding flow, existing users to main app
+  - **Type-Safe Service**: onboardingService handles saving/retrieving/clearing onboarding data with full error handling
+  - **Files**: types/onboarding.ts, utils/onboardingCalculations.ts, services/onboardingService.ts, screens/onboarding/* (7 components), components/onboarding/* (2 components)
+  - **Future Enhancement**: AI workout plan generation integrated into confirmation flow (TODO)
 - **✅ Multi-User Authentication Architecture (COMPLETED)**: Full production-ready multi-user data isolation implemented across all layers
 - **Database Service Refactoring (Completed)**: All 7 database services refactored to closure-based factory pattern:
   - `mealService` → `createMealService(userId)` - Meal logging, daily logs, quick-add meals
@@ -42,10 +51,11 @@ Jonmurr.fit is an AI-powered fitness tracking application built with React, Type
   - `migration_users_auth.sql`: Users table with auto-profile creation trigger
   - `migration_gamification_v2.sql`: 5 enhanced gamification tables (user_gamification_profile, loot_inventory, challenge_progress, ai_usage_log, xp_transactions)
   - `migration_heat_map.sql`: Daily activity summary table for heat map system
+  - `migration_onboarding_system.sql`: user_onboarding_data table for storing questionnaire responses and calculated nutrition targets
   - `migration_rls_policies.sql`: 112 RLS policies across all 28 tables for complete multi-user data isolation
   - `migration_fix_user_insert.sql`: Added INSERT policy for users table to allow profile creation during sign-up
   - `migration_fix_permissions_final.sql`: Comprehensive trigger function permissions fix with SECURITY DEFINER and error handling
-- **Architecture Status**: **PRODUCTION READY** - Full multi-user authentication architecture deployed. All database migrations applied. Complete data isolation with RLS policies. Sign-up working with automatic profile creation. All 7 services, 2 custom hooks, and App.tsx using authenticated user context. OAuth sign-in code complete, pending provider configuration. Email confirmation redirect URLs need Supabase configuration (see SUPABASE_URL_CONFIG_GUIDE.md).
+- **Architecture Status**: **PRODUCTION READY** - Full multi-user authentication architecture deployed with smart onboarding flow. All database migrations applied (including onboarding system). Complete data isolation with RLS policies. Sign-up working with automatic profile creation and onboarding routing. All 7 services, 2 custom hooks, and App.tsx using authenticated user context. OAuth sign-in code complete, pending provider configuration. Email confirmation redirect URLs need Supabase configuration (see SUPABASE_URL_CONFIG_GUIDE.md).
 
 ## User Preferences
 None documented yet - this is a fresh import.
