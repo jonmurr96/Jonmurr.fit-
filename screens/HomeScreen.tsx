@@ -620,7 +620,7 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
   const [goalView, setGoalView] = useState<'rest' | 'training'>(activeGoalType);
   const displayedTargets = macroTargets[goalView];
 
-  const { heatMapData } = useHeatMap(user.id, 14);
+  const { heatMapData } = useHeatMap(14);
   
   useEffect(() => {
     const newActiveGoalType = autoAdjustMacros && isTrainingDay ? 'training' : 'rest';

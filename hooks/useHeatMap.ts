@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createHeatMapService, getLastNDaysBoundaries, HeatMapDay, HeatMapStats } from '../services/database/heatMapService';
+import { useUserServices } from './useUserServices';
+import { getLastNDaysBoundaries, HeatMapDay, HeatMapStats } from '../services/database/heatMapService';
 
-export const useHeatMap = (userId: string | null, days: number = 14) => {
+export const useHeatMap = (days: number = 14) => {
+    const { heatMapService } = useUserServices();
     const [heatMapData, setHeatMapData] = useState<HeatMapDay[]>([]);
     const [stats, setStats] = useState<HeatMapStats>({
         totalDays: 0,
@@ -15,14 +17,8 @@ export const useHeatMap = (userId: string | null, days: number = 14) => {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchHeatMapData = useCallback(async () => {
-        if (!userId) {
-            setIsLoading(false);
-            return;
-        }
-
         try {
             setIsLoading(true);
-            const heatMapService = createHeatMapService(userId);
             const { startDate, endDate } = getLastNDaysBoundaries(days);
             
             const [data, statsData] = await Promise.all([
@@ -37,25 +33,21 @@ export const useHeatMap = (userId: string | null, days: number = 14) => {
         } finally {
             setIsLoading(false);
         }
-    }, [userId, days]);
+    }, [heatMapService, days]);
 
     useEffect(() => {
         fetchHeatMapData();
     }, [fetchHeatMapData]);
 
     const markRestDay = useCallback(async (date: string) => {
-        if (!userId) return;
-        const heatMapService = createHeatMapService(userId);
         await heatMapService.markRestDay(date);
         await fetchHeatMapData();
-    }, [userId, fetchHeatMapData]);
+    }, [heatMapService, fetchHeatMapData]);
 
     const unmarkRestDay = useCallback(async (date: string) => {
-        if (!userId) return;
-        const heatMapService = createHeatMapService(userId);
         await heatMapService.unmarkRestDay(date);
         await fetchHeatMapData();
-    }, [userId, fetchHeatMapData]);
+    }, [heatMapService, fetchHeatMapData]);
 
     const refreshHeatMap = useCallback(() => {
         fetchHeatMapData();

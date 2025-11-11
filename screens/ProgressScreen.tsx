@@ -835,7 +835,7 @@ const ProgressScreenComponent: React.FC<ProgressScreenProps> = ({
   const [isEditingWaterGoal, setIsEditingWaterGoal] = useState(false);
   const [isAddingCustomWater, setIsAddingCustomWater] = useState(false);
   
-  const { heatMapData } = useHeatMap(user.id, 90);
+  const { heatMapData } = useHeatMap(90);
   
   const handleSaveWeight = useCallback((newWeightKg: number, newGoalKg: number) => {
     const today = new Date().toISOString().split('T')[0];
