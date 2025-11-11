@@ -20,6 +20,9 @@ interface HomeScreenProps {
   workoutHistory: WorkoutHistory;
   gamificationData: GamificationState;
   levelInfo: LevelInfo;
+  todaysWaterIntake: number;
+  waterGoal: number;
+  setTodaysWaterIntake: (intake: number | ((prev: number) => number)) => void;
 }
 
 type DayStatus = 'completed' | 'partial' | 'missed' | 'future';
@@ -578,7 +581,7 @@ const WaterWidget: React.FC<{
     );
 };
 
-const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTargets, setMacroTargets, trainingProgram, dailyLogs, meals, setActiveScreen, autoAdjustMacros, savedWorkouts, startSavedWorkout, workoutHistory, gamificationData, levelInfo }) => {
+const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTargets, setMacroTargets, trainingProgram, dailyLogs, meals, setActiveScreen, autoAdjustMacros, savedWorkouts, startSavedWorkout, workoutHistory, gamificationData, levelInfo, todaysWaterIntake, waterGoal, setTodaysWaterIntake }) => {
   const [isEditingMacros, setIsEditingMacros] = useState(false);
   const [showGoalCompleteModal, setShowGoalCompleteModal] = useState(false);
   
@@ -749,7 +752,16 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <StreaksWidget streaks={gamificationData.streaks} />
-        <ChallengesWidget challenges={gamificationData.challenges} />
+        {gamificationData.challenges.some(c => !c.isCompleted) ? (
+          <ChallengesWidget challenges={gamificationData.challenges} />
+        ) : (
+          <WaterWidget 
+            intake={todaysWaterIntake} 
+            goal={waterGoal} 
+            onAddWater={(amountInOz) => setTodaysWaterIntake(prev => prev + amountInOz)}
+            setActiveScreen={setActiveScreen}
+          />
+        )}
       </div>
 
       <QuickStartCard savedWorkouts={savedWorkouts} onStart={handleStartWorkout} />
