@@ -16,6 +16,7 @@ All 5 migration files successfully applied to Supabase:
 | `migration_gamification_v2.sql` | ✅ Deployed | 5 tables | Enhanced gamification (levels, loot, challenges) |
 | `migration_heat_map.sql` | ✅ Deployed | 1 table | Daily activity tracking for heat maps |
 | `migration_rls_policies.sql` | ✅ Deployed | 112 policies | Multi-user data isolation (RLS on all 28 tables) |
+| `migration_fix_user_insert.sql` | ✅ Deployed | 1 policy | INSERT policy for users table (sign-up fix) |
 
 **Total:** 28 tables with complete Row-Level Security
 
