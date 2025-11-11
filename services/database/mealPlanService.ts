@@ -1,14 +1,19 @@
 import { supabase } from '../supabaseClient';
 import { GeneratedMealPlan } from '../../types';
 
-const USER_ID = 'default_user';
+export interface MealPlanService {
+  getActiveMealPlan(): Promise<(GeneratedMealPlan & { id: string }) | null>;
+  saveMealPlan(mealPlan: GeneratedMealPlan, isActive?: boolean): Promise<void>;
+  getAllMealPlans(): Promise<(GeneratedMealPlan & { id: string })[]>;
+  deleteMealPlan(planId: string): Promise<void>;
+}
 
-export const mealPlanService = {
-  async getActiveMealPlan(): Promise<(GeneratedMealPlan & { id: string }) | null> {
+export const createMealPlanService = (userId: string): MealPlanService => {
+  const getActiveMealPlan = async (): Promise<(GeneratedMealPlan & { id: string }) | null> => {
     const { data, error } = await supabase
       .from('generated_meal_plans')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single();
 
@@ -23,21 +28,21 @@ export const mealPlanService = {
       description: data.description,
       dailyPlan: data.daily_plan,
     };
-  },
+  };
 
-  async saveMealPlan(mealPlan: GeneratedMealPlan, isActive: boolean = false): Promise<void> {
+  const saveMealPlan = async (mealPlan: GeneratedMealPlan, isActive: boolean = false): Promise<void> => {
     if (isActive) {
       await supabase
         .from('generated_meal_plans')
         .update({ is_active: false })
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .eq('is_active', true);
     }
 
     const { error } = await supabase
       .from('generated_meal_plans')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         plan_name: mealPlan.planName,
         description: mealPlan.description,
         daily_plan: mealPlan.dailyPlan,
@@ -48,13 +53,13 @@ export const mealPlanService = {
       console.error('Error saving meal plan:', error);
       throw error;
     }
-  },
+  };
 
-  async getAllMealPlans(): Promise<(GeneratedMealPlan & { id: string })[]> {
+  const getAllMealPlans = async (): Promise<(GeneratedMealPlan & { id: string })[]> => {
     const { data, error } = await supabase
       .from('generated_meal_plans')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -68,9 +73,9 @@ export const mealPlanService = {
       description: plan.description,
       dailyPlan: plan.daily_plan,
     }));
-  },
+  };
 
-  async deleteMealPlan(planId: string): Promise<void> {
+  const deleteMealPlan = async (planId: string): Promise<void> => {
     const { error } = await supabase
       .from('generated_meal_plans')
       .delete()
@@ -80,5 +85,14 @@ export const mealPlanService = {
       console.error('Error deleting meal plan:', error);
       throw error;
     }
-  },
+  };
+
+  return {
+    getActiveMealPlan,
+    saveMealPlan,
+    getAllMealPlans,
+    deleteMealPlan,
+  };
 };
+
+export const mealPlanService = createMealPlanService('default_user');

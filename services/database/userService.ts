@@ -1,14 +1,19 @@
 import { supabase } from '../supabaseClient';
 import { UserProfile, MacroTargets } from '../../types';
 
-const USER_ID = 'default_user';
+export interface UserService {
+  getProfile(): Promise<UserProfile | null>;
+  updateProfile(profile: UserProfile): Promise<void>;
+  getMacroTargets(): Promise<MacroTargets | null>;
+  updateMacroTargets(targets: MacroTargets): Promise<void>;
+}
 
-export const userService = {
-  async getProfile(): Promise<UserProfile | null> {
+export const createUserService = (userId: string): UserService => {
+  const getProfile = async (): Promise<UserProfile | null> => {
     const { data, error } = await supabase
       .from('user_profile')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -23,13 +28,13 @@ export const userService = {
       avatarUrl: data.avatar_url,
       heightCm: data.height_cm,
     };
-  },
+  };
 
-  async updateProfile(profile: UserProfile): Promise<void> {
+  const updateProfile = async (profile: UserProfile): Promise<void> => {
     const { error } = await supabase
       .from('user_profile')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         name: profile.name,
         avatar_url: profile.avatarUrl,
         height_cm: profile.heightCm,
@@ -40,13 +45,13 @@ export const userService = {
       console.error('Error updating profile:', error);
       throw error;
     }
-  },
+  };
 
-  async getMacroTargets(): Promise<MacroTargets | null> {
+  const getMacroTargets = async (): Promise<MacroTargets | null> => {
     const { data, error } = await supabase
       .from('macro_targets')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -70,13 +75,13 @@ export const userService = {
         fat: data.training_fat,
       },
     };
-  },
+  };
 
-  async updateMacroTargets(targets: MacroTargets): Promise<void> {
+  const updateMacroTargets = async (targets: MacroTargets): Promise<void> => {
     const { error } = await supabase
       .from('macro_targets')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         rest_calories: targets.rest.calories,
         rest_protein: targets.rest.protein,
         rest_carbs: targets.rest.carbs,
@@ -92,5 +97,14 @@ export const userService = {
       console.error('Error updating macro targets:', error);
       throw error;
     }
-  },
+  };
+
+  return {
+    getProfile,
+    updateProfile,
+    getMacroTargets,
+    updateMacroTargets,
+  };
 };
+
+export const userService = createUserService('default_user');

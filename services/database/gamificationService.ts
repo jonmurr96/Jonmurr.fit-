@@ -9,30 +9,56 @@ import {
   generateMonthlyChallenges
 } from '../../utils/gamification';
 
-const USER_ID = 'default_user';
+export interface GamificationService {
+  getGamificationState(): Promise<GamificationState>;
+  getXP(): Promise<number>;
+  addXP(amount: number): Promise<number>;
+  getStreaks(): Promise<GamificationState['streaks']>;
+  updateStreak(type: 'workout' | 'meal' | 'water', current: number, longest: number, lastLogDate: string): Promise<void>;
+  getEarnedBadges(): Promise<EarnedBadge[]>;
+  earnBadge(badge: EarnedBadge): Promise<void>;
+  updateBadgeProgress(badgeId: string, currentTier: string, progressValue: number, tierProgressPct: number): Promise<void>;
+  getChallenges(): Promise<Challenge[]>;
+  updateChallenge(challenge: Challenge): Promise<void>;
+  saveChallenges(challenges: Challenge[]): Promise<void>;
+  getLevelInfo(): Promise<ExtendedLevelInfo & { xpMultiplier: number }>;
+  addXPWithTransaction(amount: number, reason: string, source?: string): Promise<{ newXP: number; leveledUp: boolean; newLevel?: number; chestUnlocked?: UnlockedLoot }>;
+  getLootInventory(): Promise<UnlockedLoot[]>;
+  unlockLoot(loot: LootItem): Promise<void>;
+  logAIUsage(usageType: 'workout_plan' | 'meal_plan' | 'coaching', xpEarned: number): Promise<void>;
+  getAIUsageCount(usageType: 'workout_plan' | 'meal_plan' | 'coaching'): Promise<number>;
+  getXPTransactions(limit?: number): Promise<any[]>;
+  refreshWeeklyChallenges(): Promise<Challenge[]>;
+  refreshMonthlyChallenges(): Promise<Challenge[]>;
+  checkAndAwardBadges(context: {
+    workoutCount?: number;
+    mealCount?: number;
+    waterDays?: number;
+    streaks?: GamificationState['streaks'];
+    weightLogs?: number;
+    challengesCompleted?: number;
+    aiUsageCount?: number;
+    currentLevel?: number;
+    totalXP?: number;
+    macrosHit?: boolean;
+    proteinHit?: boolean;
+    caloriesHit?: boolean;
+    proteinStreak?: number;
+    calorieStreak?: number;
+    earlyAdopter?: boolean;
+    firstWorkout?: boolean;
+    earlyBird?: boolean;
+    nightOwl?: boolean;
+    comebackKid?: boolean;
+  }): Promise<EarnedBadge[]>;
+}
 
-export const gamificationService = {
-  async getGamificationState(): Promise<GamificationState> {
-    const [xpData, streaksData, badgesData, challengesData] = await Promise.all([
-      this.getXP(),
-      this.getStreaks(),
-      this.getEarnedBadges(),
-      this.getChallenges(),
-    ]);
-
-    return {
-      xp: xpData,
-      streaks: streaksData,
-      earnedBadges: badgesData,
-      challenges: challengesData,
-    };
-  },
-
-  async getXP(): Promise<number> {
+export const createGamificationService = (userId: string): GamificationService => {
+  const getXP = async (): Promise<number> => {
     const { data, error } = await supabase
       .from('gamification_state')
       .select('xp')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .single();
 
     if (error || !data) {
@@ -40,16 +66,16 @@ export const gamificationService = {
     }
 
     return data.xp;
-  },
+  };
 
-  async addXP(amount: number): Promise<number> {
-    const currentXP = await this.getXP();
+  const addXP = async (amount: number): Promise<number> => {
+    const currentXP = await getXP();
     const newXP = currentXP + amount;
 
     const { error } = await supabase
       .from('gamification_state')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         xp: newXP,
         updated_at: new Date().toISOString(),
       }, {
@@ -62,13 +88,13 @@ export const gamificationService = {
     }
 
     return newXP;
-  },
+  };
 
-  async getStreaks(): Promise<GamificationState['streaks']> {
+  const getStreaks = async (): Promise<GamificationState['streaks']> => {
     const { data, error } = await supabase
       .from('streaks')
       .select('*')
-      .eq('user_id', USER_ID);
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error fetching streaks:', error);
@@ -94,18 +120,18 @@ export const gamificationService = {
     }
 
     return streaks;
-  },
+  };
 
-  async updateStreak(
+  const updateStreak = async (
     type: 'workout' | 'meal' | 'water',
     current: number,
     longest: number,
     lastLogDate: string
-  ): Promise<void> {
+  ): Promise<void> => {
     const { error } = await supabase
       .from('streaks')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         streak_type: type,
         current_streak: current,
         longest_streak: longest,
@@ -119,13 +145,13 @@ export const gamificationService = {
       console.error('Error updating streak:', error);
       throw error;
     }
-  },
+  };
 
-  async getEarnedBadges(): Promise<EarnedBadge[]> {
+  const getEarnedBadges = async (): Promise<EarnedBadge[]> => {
     const { data, error } = await supabase
       .from('badge_progress')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('earned_on', { ascending: false });
 
     if (error) {
@@ -133,9 +159,6 @@ export const gamificationService = {
       return [];
     }
 
-    // Enrich database badge progress with tier definitions from ALL_BADGES
-    const { ALL_BADGES } = await import('../../utils/gamification');
-    
     return (data || []).map((badge: any) => {
       const badgeDefinition = ALL_BADGES.find(b => b.id === badge.badge_id);
       return {
@@ -153,13 +176,13 @@ export const gamificationService = {
         metricType: badgeDefinition?.metricType || 'count',
       };
     });
-  },
+  };
 
-  async earnBadge(badge: EarnedBadge): Promise<void> {
+  const earnBadge = async (badge: EarnedBadge): Promise<void> => {
     const { error } = await supabase
       .from('badge_progress')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         badge_id: badge.id,
         name: badge.name,
         description: badge.description,
@@ -176,9 +199,9 @@ export const gamificationService = {
       console.error('Error earning badge:', error);
       throw error;
     }
-  },
-  
-  async updateBadgeProgress(badgeId: string, currentTier: string, progressValue: number, tierProgressPct: number): Promise<void> {
+  };
+
+  const updateBadgeProgress = async (badgeId: string, currentTier: string, progressValue: number, tierProgressPct: number): Promise<void> => {
     const { error } = await supabase
       .from('badge_progress')
       .update({
@@ -188,20 +211,20 @@ export const gamificationService = {
         last_tier_awarded_at: new Date().toISOString().split('T')[0],
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .eq('badge_id', badgeId);
 
     if (error) {
       console.error('Error updating badge progress:', error);
       throw error;
     }
-  },
+  };
 
-  async getChallenges(): Promise<Challenge[]> {
+  const getChallenges = async (): Promise<Challenge[]> => {
     const { data, error } = await supabase
       .from('challenges')
       .select('*')
-      .eq('user_id', USER_ID);
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error fetching challenges:', error);
@@ -220,13 +243,13 @@ export const gamificationService = {
       type: challenge.type,
       period: challenge.period,
     }));
-  },
+  };
 
-  async updateChallenge(challenge: Challenge): Promise<void> {
+  const updateChallenge = async (challenge: Challenge): Promise<void> => {
     const { error } = await supabase
       .from('challenges')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         challenge_id: challenge.id,
         title: challenge.title,
         description: challenge.description,
@@ -246,11 +269,11 @@ export const gamificationService = {
       console.error('Error updating challenge:', error);
       throw error;
     }
-  },
+  };
 
-  async saveChallenges(challenges: Challenge[]): Promise<void> {
+  const saveChallenges = async (challenges: Challenge[]): Promise<void> => {
     const records = challenges.map(challenge => ({
-      user_id: USER_ID,
+      user_id: userId,
       challenge_id: challenge.id,
       title: challenge.title,
       description: challenge.description,
@@ -274,33 +297,53 @@ export const gamificationService = {
       console.error('Error saving challenges:', error);
       throw error;
     }
-  },
+  };
 
-  // ========== GAMIFICATION V2 FUNCTIONS ==========
-
-  async getLevelInfo(): Promise<ExtendedLevelInfo & { xpMultiplier: number }> {
+  const getLevelInfo = async (): Promise<ExtendedLevelInfo & { xpMultiplier: number }> => {
     const { data, error } = await supabase
       .from('user_gamification_profile')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .single();
 
-    const xp = data?.total_xp ?? await this.getXP();
+    const xp = data?.total_xp ?? await getXP();
     const levelInfo = calculateExtendedLevelInfo(xp);
 
     return {
       ...levelInfo,
       xpMultiplier: data?.xp_multiplier ?? 1.0,
     };
-  },
+  };
 
-  async addXPWithTransaction(amount: number, reason: string, source?: string): Promise<{ newXP: number; leveledUp: boolean; newLevel?: number; chestUnlocked?: UnlockedLoot }> {
-    const oldLevelInfo = await this.getLevelInfo();
+  const unlockLoot = async (loot: LootItem): Promise<void> => {
+    const { error } = await supabase
+      .from('loot_inventory')
+      .insert({
+        user_id: userId,
+        loot_id: loot.id,
+        name: loot.name,
+        description: loot.description,
+        type: loot.type,
+        rarity: loot.rarity,
+        icon: loot.icon,
+        value: loot.value,
+        unlocked_on: new Date().toISOString().split('T')[0],
+        used: false,
+      });
+
+    if (error) {
+      console.error('Error unlocking loot:', error);
+      throw error;
+    }
+  };
+
+  const addXPWithTransaction = async (amount: number, reason: string, source?: string): Promise<{ newXP: number; leveledUp: boolean; newLevel?: number; chestUnlocked?: UnlockedLoot }> => {
+    const oldLevelInfo = await getLevelInfo();
     const multipliedAmount = Math.floor(amount * oldLevelInfo.xpMultiplier);
-    const newXP = await this.addXP(multipliedAmount);
+    const newXP = await addXP(multipliedAmount);
 
     await supabase.from('xp_transactions').insert({
-      user_id: USER_ID,
+      user_id: userId,
       amount: multipliedAmount,
       reason,
       source,
@@ -313,7 +356,7 @@ export const gamificationService = {
     await supabase
       .from('user_gamification_profile')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         numeric_level: newLevelInfo.numericLevel,
         rank_title: newLevelInfo.rankTitle,
         total_xp: newXP,
@@ -328,7 +371,7 @@ export const gamificationService = {
       const { data: currentState } = await supabase
         .from('gamification_state')
         .select('level_up_count')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .single();
 
       await supabase
@@ -337,7 +380,7 @@ export const gamificationService = {
           level_up_count: (currentState?.level_up_count ?? 0) + 1,
           last_level_up: new Date().toISOString(),
         })
-        .eq('user_id', USER_ID);
+        .eq('user_id', userId);
 
       const chest = checkForChestUnlock(oldLevelInfo.numericLevel, newLevelInfo.numericLevel);
       if (chest) {
@@ -347,7 +390,7 @@ export const gamificationService = {
           unlockedOn: new Date().toISOString().split('T')[0],
           used: false,
         };
-        await this.unlockLoot(loot);
+        await unlockLoot(loot);
         return { newXP, leveledUp: true, newLevel: newLevelInfo.numericLevel, chestUnlocked: unlockedLoot };
       }
 
@@ -355,13 +398,13 @@ export const gamificationService = {
     }
 
     return { newXP, leveledUp: false };
-  },
+  };
 
-  async getLootInventory(): Promise<UnlockedLoot[]> {
+  const getLootInventory = async (): Promise<UnlockedLoot[]> => {
     const { data, error } = await supabase
       .from('loot_inventory')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('unlocked_on', { ascending: false });
 
     if (error) {
@@ -380,35 +423,13 @@ export const gamificationService = {
       unlockedOn: item.unlocked_on,
       used: item.used,
     }));
-  },
+  };
 
-  async unlockLoot(loot: LootItem): Promise<void> {
-    const { error } = await supabase
-      .from('loot_inventory')
-      .insert({
-        user_id: USER_ID,
-        loot_id: loot.id,
-        name: loot.name,
-        description: loot.description,
-        type: loot.type,
-        rarity: loot.rarity,
-        icon: loot.icon,
-        value: loot.value,
-        unlocked_on: new Date().toISOString().split('T')[0],
-        used: false,
-      });
-
-    if (error) {
-      console.error('Error unlocking loot:', error);
-      throw error;
-    }
-  },
-
-  async logAIUsage(usageType: 'workout_plan' | 'meal_plan' | 'coaching', xpEarned: number): Promise<void> {
+  const logAIUsage = async (usageType: 'workout_plan' | 'meal_plan' | 'coaching', xpEarned: number): Promise<void> => {
     const { error } = await supabase
       .from('ai_usage_log')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         usage_type: usageType,
         xp_earned: xpEarned,
       });
@@ -417,13 +438,13 @@ export const gamificationService = {
       console.error('Error logging AI usage:', error);
       throw error;
     }
-  },
+  };
 
-  async getAIUsageCount(usageType: 'workout_plan' | 'meal_plan' | 'coaching'): Promise<number> {
+  const getAIUsageCount = async (usageType: 'workout_plan' | 'meal_plan' | 'coaching'): Promise<number> => {
     const { data, error } = await supabase
       .from('ai_usage_log')
       .select('id', { count: 'exact', head: false })
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .eq('usage_type', usageType);
 
     if (error) {
@@ -432,13 +453,13 @@ export const gamificationService = {
     }
 
     return data?.length || 0;
-  },
+  };
 
-  async getXPTransactions(limit: number = 50): Promise<any[]> {
+  const getXPTransactions = async (limit: number = 50): Promise<any[]> => {
     const { data, error } = await supabase
       .from('xp_transactions')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -448,70 +469,48 @@ export const gamificationService = {
     }
 
     return data || [];
-  },
+  };
 
-  async refreshWeeklyChallenges(): Promise<Challenge[]> {
+  const refreshWeeklyChallenges = async (): Promise<Challenge[]> => {
     const newChallenges = generateWeeklyChallenges();
-    await this.saveChallenges(newChallenges);
+    await saveChallenges(newChallenges);
     return newChallenges;
-  },
+  };
 
-  async refreshMonthlyChallenges(): Promise<Challenge[]> {
+  const refreshMonthlyChallenges = async (): Promise<Challenge[]> => {
     const newChallenges = generateMonthlyChallenges();
-    await this.saveChallenges(newChallenges);
+    await saveChallenges(newChallenges);
     return newChallenges;
-  },
+  };
 
-  // Helper: Get metric value for a badge based on its ID and context
-  getMetricValue(badgeId: string, context: any): number {
+  const getMetricValue = (badgeId: string, context: any): number => {
     switch (badgeId) {
-      // Workout badges
       case 'training_beast':
       case 'first_workout':
         return context.workoutCount || 0;
-      
-      // Nutrition - meal logging
       case 'mindful_eater':
         return context.mealCount || 0;
-      
-      // Nutrition - protein tracking  
       case 'protein_pro':
         return context.proteinHit ? (context.proteinStreak || 1) : 0;
-      
-      // Nutrition - macro tracking
       case 'macro_perfectionist':
         return context.macrosHit ? 1 : 0;
-      
-      // Nutrition - calorie control
       case 'calorie_control':
         return context.caloriesHit ? (context.calorieStreak || 1) : 0;
-      
-      // Hydration
       case 'hydration_hero':
         return context.waterDays || 0;
-      
-      // Consistency (streak)
       case 'consistency_champion':
         return context.streaks ? Math.max(
           context.streaks.workout.current,
           context.streaks.meal.current,
           context.streaks.water.current
         ) : 0;
-      
-      // Progress tracking
       case 'progress_tracker':
       case 'weight_logger':
         return context.weightLogs || 0;
-      
-      // AI usage
       case 'ai_master':
         return context.aiUsageCount || 0;
-      
-      // Challenges
       case 'challenge_legend':
         return context.challengesCompleted || 0;
-      
-      // Milestones (level-based, boolean)
       case 'level_10':
         return (context.currentLevel || 0) >= 10 ? 1 : 0;
       case 'level_25':
@@ -524,25 +523,20 @@ export const gamificationService = {
         return (context.currentLevel || 0) >= 80 ? 1 : 0;
       case 'level_100':
         return (context.currentLevel || 0) >= 100 ? 1 : 0;
-      
-      // Special badges (boolean - require explicit context flags)
       case 'early_adopter':
         return context.earlyAdopter === true ? 1 : 0;
-      case 'first_workout':
-        return context.firstWorkout === true ? 1 : 0;
       case 'early_bird':
         return context.earlyBird === true ? 1 : 0;
       case 'night_owl':
         return context.nightOwl === true ? 1 : 0;
       case 'comeback_kid':
         return context.comebackKid === true ? 1 : 0;
-      
       default:
         return 0;
     }
-  },
+  };
 
-  async checkAndAwardBadges(context: {
+  const checkAndAwardBadges = async (context: {
     workoutCount?: number;
     mealCount?: number;
     waterDays?: number;
@@ -557,25 +551,22 @@ export const gamificationService = {
     caloriesHit?: boolean;
     proteinStreak?: number;
     calorieStreak?: number;
-    // Boolean badge triggers (must be explicitly set to true)
     earlyAdopter?: boolean;
     firstWorkout?: boolean;
     earlyBird?: boolean;
     nightOwl?: boolean;
     comebackKid?: boolean;
-  }): Promise<EarnedBadge[]> {
-    const existingBadges = await this.getEarnedBadges();
+  }): Promise<EarnedBadge[]> => {
+    const existingBadges = await getEarnedBadges();
     const badgeMap = new Map(existingBadges.map(b => [b.id, b]));
     const newAndUpgradedBadges: EarnedBadge[] = [];
 
     for (const badgeDef of ALL_BADGES) {
-      const metricValue = this.getMetricValue(badgeDef.id, context);
+      const metricValue = getMetricValue(badgeDef.id, context);
       const existingBadge = badgeMap.get(badgeDef.id) as EarnedBadge | undefined;
       
-      // Skip if no progress on this metric
       if (metricValue === 0 && !existingBadge) continue;
 
-      // Find highest tier achieved
       let highestTierAchieved = null;
       for (let i = badgeDef.tiers.length - 1; i >= 0; i--) {
         if (metricValue >= badgeDef.tiers[i].threshold) {
@@ -584,9 +575,8 @@ export const gamificationService = {
         }
       }
 
-      if (!highestTierAchieved) continue; // Haven't hit Bronze yet
+      if (!highestTierAchieved) continue;
 
-      // NEW BADGE: User hasn't earned this badge yet
       if (!existingBadge) {
         const tierIndex = badgeDef.tiers.indexOf(highestTierAchieved);
         const nextTier = tierIndex < badgeDef.tiers.length - 1 ? badgeDef.tiers[tierIndex + 1] : null;
@@ -609,22 +599,19 @@ export const gamificationService = {
           lastTierAwardedAt: new Date().toISOString().split('T')[0],
         };
         
-        await this.earnBadge(newBadge);
+        await earnBadge(newBadge);
         newAndUpgradedBadges.push(newBadge);
-      }
-      // TIER UPGRADE: User has this badge, check if they upgraded tier
-      else if (existingBadge) {
+      } else if (existingBadge) {
         const currentTierIndex = badgeDef.tiers.findIndex(t => t.tier === existingBadge.currentTier);
         const highestTierIndex = badgeDef.tiers.indexOf(highestTierAchieved);
         
-        // User upgraded to a higher tier!
         if (highestTierIndex > currentTierIndex) {
           const nextTier = highestTierIndex < badgeDef.tiers.length - 1 ? badgeDef.tiers[highestTierIndex + 1] : null;
           const progressPct = nextTier 
             ? Math.min(100, ((metricValue - highestTierAchieved.threshold) / (nextTier.threshold - highestTierAchieved.threshold)) * 100)
             : 100;
 
-          await this.updateBadgeProgress(badgeDef.id, highestTierAchieved.tier, metricValue, progressPct);
+          await updateBadgeProgress(badgeDef.id, highestTierAchieved.tier, metricValue, progressPct);
           
           const upgradedBadge: EarnedBadge = {
             id: existingBadge.id,
@@ -642,19 +629,59 @@ export const gamificationService = {
           };
           
           newAndUpgradedBadges.push(upgradedBadge);
-        }
-        // No tier upgrade, but update progress value
-        else if (metricValue !== existingBadge.progressValue) {
+        } else if (metricValue !== existingBadge.progressValue) {
           const nextTier = currentTierIndex < badgeDef.tiers.length - 1 ? badgeDef.tiers[currentTierIndex + 1] : null;
           const progressPct = nextTier 
             ? Math.min(100, ((metricValue - badgeDef.tiers[currentTierIndex].threshold) / (nextTier.threshold - badgeDef.tiers[currentTierIndex].threshold)) * 100)
             : 100;
 
-          await this.updateBadgeProgress(badgeDef.id, existingBadge.currentTier, metricValue, progressPct);
+          await updateBadgeProgress(badgeDef.id, existingBadge.currentTier, metricValue, progressPct);
         }
       }
     }
 
     return newAndUpgradedBadges;
-  },
+  };
+
+  const getGamificationState = async (): Promise<GamificationState> => {
+    const [xpData, streaksData, badgesData, challengesData] = await Promise.all([
+      getXP(),
+      getStreaks(),
+      getEarnedBadges(),
+      getChallenges(),
+    ]);
+
+    return {
+      xp: xpData,
+      streaks: streaksData,
+      earnedBadges: badgesData,
+      challenges: challengesData,
+    };
+  };
+
+  return {
+    getGamificationState,
+    getXP,
+    addXP,
+    getStreaks,
+    updateStreak,
+    getEarnedBadges,
+    earnBadge,
+    updateBadgeProgress,
+    getChallenges,
+    updateChallenge,
+    saveChallenges,
+    getLevelInfo,
+    addXPWithTransaction,
+    getLootInventory,
+    unlockLoot,
+    logAIUsage,
+    getAIUsageCount,
+    getXPTransactions,
+    refreshWeeklyChallenges,
+    refreshMonthlyChallenges,
+    checkAndAwardBadges,
+  };
 };
+
+export const gamificationService = createGamificationService('default_user');

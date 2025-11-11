@@ -1,10 +1,19 @@
 import { supabase } from '../supabaseClient';
 import { Meal, FoodItem, DailyMacros, DailyLog } from '../../types';
 
-const USER_ID = 'default_user';
+export interface MealService {
+  getMealsForDate(date: string): Promise<Meal[]>;
+  addMeal(meal: Omit<Meal, 'id'>): Promise<Meal>;
+  deleteMeal(mealId: string, mealDate: Date): Promise<void>;
+  updateDailyLog(date: Date): Promise<void>;
+  getDailyLog(date: string): Promise<DailyMacros>;
+  getWeekLogs(startDate: Date): Promise<DailyLog[]>;
+  getQuickAddMeals(): Promise<{ name: string; items: FoodItem[] }[]>;
+  addQuickAddMeal(name: string, items: FoodItem[]): Promise<void>;
+}
 
-export const mealService = {
-  async getMealsForDate(date: string): Promise<Meal[]> {
+export const createMealService = (userId: string): MealService => {
+  const getMealsForDate = async (date: string): Promise<Meal[]> => {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -18,7 +27,7 @@ export const mealService = {
         timestamp,
         food_items (*)
       `)
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .gte('timestamp', startOfDay.toISOString())
       .lte('timestamp', endOfDay.toISOString())
       .order('timestamp', { ascending: true });
@@ -42,13 +51,70 @@ export const mealService = {
         fat: item.fat,
       })),
     }));
-  },
+  };
 
-  async addMeal(meal: Omit<Meal, 'id'>): Promise<Meal> {
+  const getDailyLog = async (date: string): Promise<DailyMacros> => {
+    const { data, error } = await supabase
+      .from('daily_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
+
+    if (error || !data) {
+      return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    }
+
+    return {
+      calories: data.calories,
+      protein: data.protein,
+      carbs: data.carbs,
+      fat: data.fat,
+    };
+  };
+
+  const updateDailyLog = async (date: Date): Promise<void> => {
+    const dateStr = date.toISOString().split('T')[0];
+    const meals = await getMealsForDate(dateStr);
+
+    const macros = meals.reduce(
+      (acc, meal) => {
+        meal.items.forEach(item => {
+          acc.calories += item.calories;
+          acc.protein += item.protein;
+          acc.carbs += item.carbs;
+          acc.fat += item.fat;
+        });
+        return acc;
+      },
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+
+    const { error } = await supabase
+      .from('daily_logs')
+      .upsert({
+        user_id: userId,
+        date: dateStr,
+        calories: macros.calories,
+        protein: macros.protein,
+        carbs: macros.carbs,
+        fat: macros.fat,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,date'
+      });
+
+    if (error) {
+      console.error('Error updating daily log:', error);
+      throw error;
+    }
+  };
+
+  const addMeal = async (meal: Omit<Meal, 'id'>): Promise<Meal> => {
     const { data: mealData, error: mealError } = await supabase
       .from('meals')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         type: meal.type,
         timestamp: meal.timestamp.toISOString(),
       })
@@ -80,15 +146,15 @@ export const mealService = {
       throw itemsError;
     }
 
-    await this.updateDailyLog(meal.timestamp);
+    await updateDailyLog(meal.timestamp);
 
     return {
       id: mealData.id,
       ...meal,
     };
-  },
+  };
 
-  async deleteMeal(mealId: string, mealDate: Date): Promise<void> {
+  const deleteMeal = async (mealId: string, mealDate: Date): Promise<void> => {
     const { error } = await supabase
       .from('meals')
       .delete()
@@ -99,67 +165,10 @@ export const mealService = {
       throw error;
     }
 
-    await this.updateDailyLog(mealDate);
-  },
+    await updateDailyLog(mealDate);
+  };
 
-  async updateDailyLog(date: Date): Promise<void> {
-    const dateStr = date.toISOString().split('T')[0];
-    const meals = await this.getMealsForDate(dateStr);
-
-    const macros = meals.reduce(
-      (acc, meal) => {
-        meal.items.forEach(item => {
-          acc.calories += item.calories;
-          acc.protein += item.protein;
-          acc.carbs += item.carbs;
-          acc.fat += item.fat;
-        });
-        return acc;
-      },
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
-    );
-
-    const { error } = await supabase
-      .from('daily_logs')
-      .upsert({
-        user_id: USER_ID,
-        date: dateStr,
-        calories: macros.calories,
-        protein: macros.protein,
-        carbs: macros.carbs,
-        fat: macros.fat,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,date'
-      });
-
-    if (error) {
-      console.error('Error updating daily log:', error);
-      throw error;
-    }
-  },
-
-  async getDailyLog(date: string): Promise<DailyMacros> {
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .select('*')
-      .eq('user_id', USER_ID)
-      .eq('date', date)
-      .single();
-
-    if (error || !data) {
-      return { calories: 0, protein: 0, carbs: 0, fat: 0 };
-    }
-
-    return {
-      calories: data.calories,
-      protein: data.protein,
-      carbs: data.carbs,
-      fat: data.fat,
-    };
-  },
-
-  async getWeekLogs(startDate: Date): Promise<DailyLog[]> {
+  const getWeekLogs = async (startDate: Date): Promise<DailyLog[]> => {
     const logs: DailyLog[] = [];
     
     for (let i = 0; i < 7; i++) {
@@ -167,14 +176,14 @@ export const mealService = {
       date.setDate(startDate.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const macros = await this.getDailyLog(dateStr);
+      const macros = await getDailyLog(dateStr);
       logs.push({ date: dateStr, macros });
     }
 
     return logs;
-  },
+  };
 
-  async getQuickAddMeals(): Promise<{ name: string; items: FoodItem[] }[]> {
+  const getQuickAddMeals = async (): Promise<{ name: string; items: FoodItem[] }[]> => {
     const { data, error } = await supabase
       .from('quick_add_meals')
       .select(`
@@ -182,7 +191,7 @@ export const mealService = {
         name,
         quick_add_meal_items (*)
       `)
-      .eq('user_id', USER_ID);
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error fetching quick add meals:', error);
@@ -201,13 +210,13 @@ export const mealService = {
         fat: item.fat,
       })),
     }));
-  },
+  };
 
-  async addQuickAddMeal(name: string, items: FoodItem[]): Promise<void> {
-    const { data: mealData, error: mealError } = await supabase
+  const addQuickAddMeal = async (name: string, items: FoodItem[]): Promise<void> => {
+    const { data: mealData, error: mealError} = await supabase
       .from('quick_add_meals')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         name,
       })
       .select()
@@ -237,5 +246,18 @@ export const mealService = {
       console.error('Error adding quick add meal items:', itemsError);
       throw itemsError;
     }
-  },
+  };
+
+  return {
+    getMealsForDate,
+    addMeal,
+    deleteMeal,
+    updateDailyLog,
+    getDailyLog,
+    getWeekLogs,
+    getQuickAddMeals,
+    addQuickAddMeal,
+  };
 };
+
+export const mealService = createMealService('default_user');

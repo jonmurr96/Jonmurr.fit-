@@ -1,60 +1,56 @@
 import { supabase } from '../supabaseClient';
 import { TrainingProgram, Workout, SavedWorkout, WorkoutHistory, CompletedWorkout } from '../../types';
 
-const USER_ID = 'default_user';
+export interface WorkoutService {
+  getActiveProgram(): Promise<TrainingProgram | null>;
+  saveProgram(program: TrainingProgram, isActive?: boolean): Promise<void>;
+  updateWorkoutCompletion(programId: string, workoutDay: number, completed: boolean): Promise<void>;
+  logCompletedWorkout(workout: CompletedWorkout): Promise<void>;
+  getWorkoutHistory(): Promise<WorkoutHistory>;
+  getSavedWorkouts(): Promise<SavedWorkout[]>;
+}
 
-export const workoutService = {
-  async getActiveProgram(): Promise<TrainingProgram | null> {
-    const { data, error } = await supabase
-      .from('training_programs')
-      .select(`
-        *,
-        workouts (
-          *,
-          exercises (
-            *,
-            workout_sets (*)
-          )
-        )
-      `)
-      .eq('user_id', USER_ID)
-      .eq('is_active', true)
-      .single();
+export const createWorkoutService = (userId: string): WorkoutService => {
+  const mapProgramFromDb = (data: any): TrainingProgram => {
+    const workouts = (data.workouts || []).map((workout: any) => ({
+      id: workout.id,
+      day: workout.day,
+      focus: workout.focus,
+      completed: workout.completed,
+      optionalBlocks: workout.optional_blocks,
+      exercises: (workout.exercises || [])
+        .sort((a: any, b: any) => a.exercise_order - b.exercise_order)
+        .map((exercise: any) => ({
+          id: exercise.id,
+          name: exercise.name,
+          category: exercise.category,
+          isFavorite: exercise.is_favorite,
+          sets: (exercise.workout_sets || [])
+            .sort((a: any, b: any) => a.set_number - b.set_number)
+            .map((set: any) => ({
+              id: set.id,
+              targetReps: set.target_reps,
+              targetWeight: set.target_weight,
+              actualReps: set.actual_reps,
+              actualWeight: set.actual_weight,
+              rpe: set.rpe,
+              restMinutes: set.rest_minutes,
+              completed: set.completed,
+            })),
+        })),
+    }));
 
-    if (error || !data) {
-      console.error('Error fetching active program:', error);
-      return null;
-    }
+    return {
+      programName: data.program_name,
+      durationWeeks: data.duration_weeks,
+      description: data.description,
+      splitType: data.split_type,
+      preferences: data.preferences,
+      workouts,
+    };
+  };
 
-    return this.mapProgramFromDb(data);
-  },
-
-  async saveProgram(program: TrainingProgram, isActive: boolean = false): Promise<void> {
-    const { data: programData, error: programError } = await supabase
-      .from('training_programs')
-      .insert({
-        user_id: USER_ID,
-        program_name: program.programName,
-        duration_weeks: program.durationWeeks,
-        description: program.description,
-        split_type: program.splitType,
-        preferences: program.preferences,
-        is_active: isActive,
-      })
-      .select()
-      .single();
-
-    if (programError || !programData) {
-      console.error('Error saving program:', programError);
-      throw programError;
-    }
-
-    for (const workout of program.workouts) {
-      await this.saveWorkoutToProgram(programData.id, workout);
-    }
-  },
-
-  async saveWorkoutToProgram(programId: string, workout: Workout): Promise<void> {
+  const saveWorkoutToProgram = async (programId: string, workout: Workout): Promise<void> => {
     const { data: workoutData, error: workoutError } = await supabase
       .from('workouts')
       .insert({
@@ -112,9 +108,59 @@ export const workoutService = {
         throw setsError;
       }
     }
-  },
+  };
 
-  async updateWorkoutCompletion(programId: string, workoutDay: number, completed: boolean): Promise<void> {
+  const getActiveProgram = async (): Promise<TrainingProgram | null> => {
+    const { data, error } = await supabase
+      .from('training_programs')
+      .select(`
+        *,
+        workouts (
+          *,
+          exercises (
+            *,
+            workout_sets (*)
+          )
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching active program:', error);
+      return null;
+    }
+
+    return mapProgramFromDb(data);
+  };
+
+  const saveProgram = async (program: TrainingProgram, isActive: boolean = false): Promise<void> => {
+    const { data: programData, error: programError } = await supabase
+      .from('training_programs')
+      .insert({
+        user_id: userId,
+        program_name: program.programName,
+        duration_weeks: program.durationWeeks,
+        description: program.description,
+        split_type: program.splitType,
+        preferences: program.preferences,
+        is_active: isActive,
+      })
+      .select()
+      .single();
+
+    if (programError || !programData) {
+      console.error('Error saving program:', programError);
+      throw programError;
+    }
+
+    for (const workout of program.workouts) {
+      await saveWorkoutToProgram(programData.id, workout);
+    }
+  };
+
+  const updateWorkoutCompletion = async (programId: string, workoutDay: number, completed: boolean): Promise<void> => {
     const { error } = await supabase
       .from('workouts')
       .update({ completed })
@@ -125,13 +171,13 @@ export const workoutService = {
       console.error('Error updating workout completion:', error);
       throw error;
     }
-  },
+  };
 
-  async logCompletedWorkout(workout: CompletedWorkout): Promise<void> {
+  const logCompletedWorkout = async (workout: CompletedWorkout): Promise<void> => {
     const { error } = await supabase
       .from('workout_history')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         workout_data: workout,
         date_completed: workout.dateCompleted,
       });
@@ -140,13 +186,13 @@ export const workoutService = {
       console.error('Error logging completed workout:', error);
       throw error;
     }
-  },
+  };
 
-  async getWorkoutHistory(): Promise<WorkoutHistory> {
+  const getWorkoutHistory = async (): Promise<WorkoutHistory> => {
     const { data, error } = await supabase
       .from('workout_history')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('date_completed', { ascending: false });
 
     if (error) {
@@ -155,14 +201,14 @@ export const workoutService = {
     }
 
     return (data || []).map((record: any) => record.workout_data as CompletedWorkout);
-  },
+  };
 
-  async getSavedWorkouts(): Promise<SavedWorkout[]> {
+  const getSavedWorkouts = async (): Promise<SavedWorkout[]> => {
     const { data, error } = await supabase
       .from('saved_workouts')
       .select('*')
-      .eq('user_id', USER_ID)
-      .order('created_at', { ascending: false });
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false});
 
     if (error) {
       console.error('Error fetching saved workouts:', error);
@@ -181,44 +227,16 @@ export const workoutService = {
       lastPerformed: record.last_performed,
       isPinned: record.is_pinned,
     }));
-  },
+  };
 
-  mapProgramFromDb(data: any): TrainingProgram {
-    const workouts = (data.workouts || []).map((workout: any) => ({
-      id: workout.id,
-      day: workout.day,
-      focus: workout.focus,
-      completed: workout.completed,
-      optionalBlocks: workout.optional_blocks,
-      exercises: (workout.exercises || [])
-        .sort((a: any, b: any) => a.exercise_order - b.exercise_order)
-        .map((exercise: any) => ({
-          id: exercise.id,
-          name: exercise.name,
-          category: exercise.category,
-          isFavorite: exercise.is_favorite,
-          sets: (exercise.workout_sets || [])
-            .sort((a: any, b: any) => a.set_number - b.set_number)
-            .map((set: any) => ({
-              id: set.id,
-              targetReps: set.target_reps,
-              targetWeight: set.target_weight,
-              actualReps: set.actual_reps,
-              actualWeight: set.actual_weight,
-              rpe: set.rpe,
-              restMinutes: set.rest_minutes,
-              completed: set.completed,
-            })),
-        })),
-    }));
-
-    return {
-      programName: data.program_name,
-      durationWeeks: data.duration_weeks,
-      description: data.description,
-      splitType: data.split_type,
-      preferences: data.preferences,
-      workouts,
-    };
-  },
+  return {
+    getActiveProgram,
+    saveProgram,
+    updateWorkoutCompletion,
+    logCompletedWorkout,
+    getWorkoutHistory,
+    getSavedWorkouts,
+  };
 };
+
+export const workoutService = createWorkoutService('default_user');

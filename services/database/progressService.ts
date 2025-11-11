@@ -1,14 +1,24 @@
 import { supabase } from '../supabaseClient';
 import { WeightLog, WaterLog, PhotoBundle, Milestone } from '../../types';
 
-const USER_ID = 'default_user';
+export interface ProgressService {
+  getWeightLogs(): Promise<WeightLog[]>;
+  addWeightLog(date: string, weightKg: number): Promise<void>;
+  getWaterLog(date: string): Promise<WaterLog>;
+  getAllWaterLogs(): Promise<WaterLog[]>;
+  updateWaterLog(date: string, intakeOz: number): Promise<void>;
+  getPhotoBundles(): Promise<PhotoBundle[]>;
+  addProgressPhoto(date: string, angle: 'front' | 'side' | 'back', photoUrl: string): Promise<void>;
+  getMilestones(): Promise<Milestone[]>;
+  addMilestone(milestone: Milestone): Promise<void>;
+}
 
-export const progressService = {
-  async getWeightLogs(): Promise<WeightLog[]> {
+export const createProgressService = (userId: string): ProgressService => {
+  const getWeightLogs = async (): Promise<WeightLog[]> => {
     const { data, error } = await supabase
       .from('weight_logs')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('date', { ascending: true });
 
     if (error) {
@@ -20,13 +30,13 @@ export const progressService = {
       date: log.date,
       weightKg: log.weight_kg,
     }));
-  },
+  };
 
-  async addWeightLog(date: string, weightKg: number): Promise<void> {
+  const addWeightLog = async (date: string, weightKg: number): Promise<void> => {
     const { error } = await supabase
       .from('weight_logs')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         date,
         weight_kg: weightKg,
       });
@@ -35,13 +45,13 @@ export const progressService = {
       console.error('Error adding weight log:', error);
       throw error;
     }
-  },
+  };
 
-  async getWaterLog(date: string): Promise<WaterLog> {
+  const getWaterLog = async (date: string): Promise<WaterLog> => {
     const { data, error } = await supabase
       .from('water_logs')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .eq('date', date)
       .single();
 
@@ -53,13 +63,13 @@ export const progressService = {
       date: data.date,
       intake: data.intake_oz,
     };
-  },
+  };
 
-  async getAllWaterLogs(): Promise<WaterLog[]> {
+  const getAllWaterLogs = async (): Promise<WaterLog[]> => {
     const { data, error } = await supabase
       .from('water_logs')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('date', { ascending: true });
 
     if (error) {
@@ -71,13 +81,13 @@ export const progressService = {
       date: log.date,
       intake: log.intake_oz,
     }));
-  },
+  };
 
-  async updateWaterLog(date: string, intakeOz: number): Promise<void> {
+  const updateWaterLog = async (date: string, intakeOz: number): Promise<void> => {
     const { error } = await supabase
       .from('water_logs')
       .upsert({
-        user_id: USER_ID,
+        user_id: userId,
         date,
         intake_oz: intakeOz,
       }, {
@@ -88,13 +98,13 @@ export const progressService = {
       console.error('Error updating water log:', error);
       throw error;
     }
-  },
+  };
 
-  async getPhotoBundles(): Promise<PhotoBundle[]> {
+  const getPhotoBundles = async (): Promise<PhotoBundle[]> => {
     const { data, error } = await supabase
       .from('progress_photos')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -120,13 +130,13 @@ export const progressService = {
     }
 
     return Array.from(bundleMap.values());
-  },
+  };
 
-  async addProgressPhoto(date: string, angle: 'front' | 'side' | 'back', photoUrl: string): Promise<void> {
+  const addProgressPhoto = async (date: string, angle: 'front' | 'side' | 'back', photoUrl: string): Promise<void> => {
     const { error } = await supabase
       .from('progress_photos')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         date,
         angle,
         photo_url: photoUrl,
@@ -136,13 +146,13 @@ export const progressService = {
       console.error('Error adding progress photo:', error);
       throw error;
     }
-  },
+  };
 
-  async getMilestones(): Promise<Milestone[]> {
+  const getMilestones = async (): Promise<Milestone[]> => {
     const { data, error } = await supabase
       .from('milestones')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -157,13 +167,13 @@ export const progressService = {
       title: milestone.title,
       description: milestone.description,
     }));
-  },
+  };
 
-  async addMilestone(milestone: Milestone): Promise<void> {
+  const addMilestone = async (milestone: Milestone): Promise<void> => {
     const { error } = await supabase
       .from('milestones')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         milestone_id: milestone.id,
         date: milestone.date,
         type: milestone.type,
@@ -175,5 +185,19 @@ export const progressService = {
       console.error('Error adding milestone:', error);
       throw error;
     }
-  },
+  };
+
+  return {
+    getWeightLogs,
+    addWeightLog,
+    getWaterLog,
+    getAllWaterLogs,
+    updateWaterLog,
+    getPhotoBundles,
+    addProgressPhoto,
+    getMilestones,
+    addMilestone,
+  };
 };
+
+export const progressService = createProgressService('default_user');
