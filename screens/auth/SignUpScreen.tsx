@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { authService } from '../../services/authService';
+import { GoogleSignInButton, AppleSignInButton, OAuthDivider } from '../../components/OAuthButtons';
 
 interface SignUpScreenProps {
   onNavigateToSignIn: () => void;
@@ -14,6 +15,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToSignIn }
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -89,6 +91,40 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToSignIn }
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setOauthLoading(true);
+
+    try {
+      const { error: signInError } = await authService.signInWithGoogle();
+      if (signInError) {
+        setError(signInError.message || 'Failed to sign in with Google. Please try again.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Google sign in error:', err);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setError(null);
+    setOauthLoading(true);
+
+    try {
+      const { error: signInError } = await authService.signInWithApple();
+      if (signInError) {
+        setError(signInError.message || 'Failed to sign in with Apple. Please try again.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Apple sign in error:', err);
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
@@ -136,6 +172,13 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToSignIn }
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
+
+          <div className="space-y-3 mb-6">
+            <GoogleSignInButton onClick={handleGoogleSignIn} isLoading={oauthLoading} />
+            <AppleSignInButton onClick={handleAppleSignIn} isLoading={oauthLoading} />
+          </div>
+
+          <OAuthDivider />
 
           <form onSubmit={handleSignUp} className="space-y-5">
             <div>

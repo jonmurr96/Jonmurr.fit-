@@ -87,6 +87,58 @@ class AuthService {
     }
   }
 
+  async signInWithGoogle(): Promise<AuthResponse> {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        return { user: null, session: null, error };
+      }
+
+      return { user: null, session: null, error: null };
+    } catch (err) {
+      console.error('Google sign in error:', err);
+      return {
+        user: null,
+        session: null,
+        error: err as AuthError,
+      };
+    }
+  }
+
+  async signInWithApple(): Promise<AuthResponse> {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        return { user: null, session: null, error };
+      }
+
+      return { user: null, session: null, error: null };
+    } catch (err) {
+      console.error('Apple sign in error:', err);
+      return {
+        user: null,
+        session: null,
+        error: err as AuthError,
+      };
+    }
+  }
+
   async signOut(): Promise<{ error: AuthError | null }> {
     try {
       const { error } = await supabase.auth.signOut();
@@ -147,6 +199,58 @@ class AuthService {
       return { profile: data, error: null };
     } catch (err) {
       console.error('Get user profile error:', err);
+      const error = err instanceof Error ? err : new Error('Unknown error occurred');
+      return { profile: null, error };
+    }
+  }
+
+  async createOAuthUserProfile(user: AuthUser): Promise<{ profile: UserProfileData | null; error: DatabaseError }> {
+    try {
+      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || 'User';
+      const emailPrefix = user.email?.split('@')[0] || 'user';
+      const baseUsername = emailPrefix.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const username = `${baseUsername}_${randomSuffix}`;
+      const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      while (attempts < maxAttempts) {
+        const finalUsername = attempts === 0 ? username : `${baseUsername}_${Math.random().toString(36).substring(2, 8)}`;
+        
+        const { data, error } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            full_name: fullName,
+            username: finalUsername,
+            avatar_url: avatarUrl,
+            onboarding_complete: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (!error) {
+          return { profile: data, error: null };
+        }
+
+        if (error && 'code' in error && error.code === '23505') {
+          attempts++;
+          console.log(`Username collision, retrying (${attempts}/${maxAttempts})...`);
+          continue;
+        }
+
+        console.error('Create OAuth user profile error:', error);
+        return { profile: null, error };
+      }
+
+      const fallbackError = new Error('Failed to create unique username after multiple attempts');
+      return { profile: null, error: fallbackError };
+    } catch (err) {
+      console.error('Create OAuth user profile error:', err);
       const error = err instanceof Error ? err : new Error('Unknown error occurred');
       return { profile: null, error };
     }

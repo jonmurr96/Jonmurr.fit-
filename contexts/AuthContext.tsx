@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUserProfile = async (userId: string, retries = 3): Promise<void> => {
+  const loadUserProfile = async (userId: string, currentUser: User | null, retries = 3): Promise<void> => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       const { profile, error } = await authService.getUserProfile(userId);
       
@@ -45,6 +45,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 500));
           continue;
         }
+        
+        if (currentUser && attempt === retries) {
+          console.log('Creating profile for OAuth user:', currentUser.id);
+          const { profile: newProfile, error: createError } = await authService.createOAuthUserProfile(currentUser);
+          
+          if (newProfile) {
+            setUserProfile(newProfile);
+            return;
+          }
+          
+          if (createError) {
+            console.error('Error creating OAuth user profile:', createError);
+          }
+        }
       }
       
       if (error) {
@@ -57,7 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUserProfile = async () => {
     if (user?.id) {
-      await loadUserProfile(user.id);
+      await loadUserProfile(user.id, user);
     }
   };
 
@@ -69,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          await loadUserProfile(currentSession.user.id);
+          await loadUserProfile(currentSession.user.id, currentSession.user);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -85,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(newSession?.user ?? null);
 
       if (newSession?.user) {
-        await loadUserProfile(newSession.user.id);
+        await loadUserProfile(newSession.user.id, newSession.user);
       } else {
         setUserProfile(null);
       }
