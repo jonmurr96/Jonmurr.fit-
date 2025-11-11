@@ -491,6 +491,93 @@ const ChallengesWidget: React.FC<{ challenges: Challenge[]; }> = ({ challenges }
     );
 };
 
+const WaterWidget: React.FC<{
+    intake: number;
+    goal: number;
+    onAddWater: (amountInOz: number) => void;
+    setActiveScreen: (screen: Screen) => void;
+}> = ({ intake, goal, onAddWater, setActiveScreen }) => {
+    const percentage = goal > 0 ? Math.min((intake / goal) * 100, 100) : 0;
+    const radius = 32;
+    const circumference = 2 * Math.PI * radius;
+    const goalMet = intake >= goal && goal > 0;
+
+    return (
+        <div 
+            className="bg-zinc-900 rounded-2xl p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+            onClick={() => setActiveScreen('progress')}
+        >
+            <h3 className="font-bold text-white mb-3 text-lg">Water Intake</h3>
+            <div className="flex items-center justify-between">
+                <div className="relative w-20 h-20 flex-shrink-0">
+                    <svg className="w-full h-full" viewBox="0 0 80 80">
+                        <circle 
+                            className="text-zinc-700" 
+                            strokeWidth="5" 
+                            stroke="currentColor" 
+                            fill="transparent" 
+                            r={radius} 
+                            cx="40" 
+                            cy="40" 
+                        />
+                        <circle 
+                            className={`${goalMet ? 'text-green-400' : 'text-sky-400'} transition-all duration-500`}
+                            strokeWidth="5" 
+                            strokeDasharray={circumference} 
+                            strokeDashoffset={circumference - (percentage / 100) * circumference} 
+                            strokeLinecap="round" 
+                            transform="rotate(-90 40 40)" 
+                            stroke="currentColor" 
+                            fill="transparent" 
+                            r={radius} 
+                            cx="40" 
+                            cy="40" 
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-xl">💧</span>
+                        <p className="text-[10px] text-zinc-400 mt-0.5">{Math.round(percentage)}%</p>
+                    </div>
+                </div>
+                <div className="flex-1 text-right">
+                    <p className="text-2xl font-bold">
+                        {intake}
+                        <span className="text-sm text-zinc-400"> / {goal} oz</span>
+                    </p>
+                    {goalMet ? (
+                        <p className="text-xs text-green-400 font-semibold mt-1">Goal Complete! 🎉</p>
+                    ) : (
+                        <p className="text-xs text-zinc-400 mt-1">{goal - intake} oz to go</p>
+                    )}
+                </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                <button 
+                    onClick={() => onAddWater(8)}
+                    disabled={goalMet}
+                    className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg py-1.5 text-xs font-semibold transition-colors"
+                >
+                    +8
+                </button>
+                <button 
+                    onClick={() => onAddWater(16)}
+                    disabled={goalMet}
+                    className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg py-1.5 text-xs font-semibold transition-colors"
+                >
+                    +16
+                </button>
+                <button 
+                    onClick={() => onAddWater(20)}
+                    disabled={goalMet}
+                    className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg py-1.5 text-xs font-semibold transition-colors"
+                >
+                    +20
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTargets, setMacroTargets, trainingProgram, dailyLogs, meals, setActiveScreen, autoAdjustMacros, savedWorkouts, startSavedWorkout, workoutHistory, gamificationData, levelInfo }) => {
   const [isEditingMacros, setIsEditingMacros] = useState(false);
   const [showGoalCompleteModal, setShowGoalCompleteModal] = useState(false);
