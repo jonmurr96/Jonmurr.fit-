@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { BottomNav } from './components/BottomNav';
 import { Screen, UserProfile, MacroTargets, DailyMacros, Meal, TrainingProgram, WeightLog, PhotoBundle, FoodItem, DailyLog, WaterLog, Milestone, WorkoutPlanPreferences, SavedWorkout, WorkoutHistory, ProgressionPreference, Workout, Exercise, WorkoutDraft, GeneratedMealPlan, NutritionPlanPreferences, GamificationState, EarnedBadge, LevelInfo, ExtendedLevelInfo, UnlockedLoot } from './types';
 import { generateWorkoutPlan, generateMealPlan } from './services/geminiService';
-import { userService, mealService, workoutService, progressService, mealPlanService } from './services/database';
+import { useUserServices } from './hooks/useUserServices';
 import { useGamification } from './hooks/useGamification';
 import { GamificationFeedback } from './components/gamification/GamificationFeedback';
 import { checkDatabaseHealth } from './services/database/healthCheck';
@@ -90,6 +90,8 @@ const ScreenLoader: React.FC = () => (
 );
 
 const App: React.FC = () => {
+    const { userService, mealService, workoutService, progressService, mealPlanService } = useUserServices();
+
     const useStickyState = <T,>(defaultValue: T, key: string): [T, React.Dispatch<React.SetStateAction<T>>] => {
         const [value, setValue] = useState<T>(() => {
             try {
