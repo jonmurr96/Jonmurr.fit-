@@ -1,0 +1,110 @@
+Build a smart onboarding system that triggers immediately after user signup/login is completed. The flow should take the user through a multi-step onboarding questionnaire to personalize their experience, and then dynamically calculate and generate personalized data for macros, water intake, nutrition plans, and training programs.
+
+---
+
+🧠 Structure:
+
+1. Onboarding flow begins **only if user hasn't completed onboarding** (`onboarding_complete = false` in Supabase user profile table).
+2. Use a multi-step UI with progress indicators and clean UI transitions (mobile-first design).
+3. At the end of onboarding, show AI-generated results in a “Smart Summary” card: 
+   - Recommended macros (protein/carbs/fats)
+   - Calorie needs (TDEE calculation based on inputs)
+   - Water intake target (based on weight/goals)
+   - 4-week workout plan based on preferences
+   - Nutrition plan (optionally includes recommended meals)
+
+---
+
+📋 Questionnaire Sections:
+
+### 1. Personal Info
+- Date of Birth (age will be calculated automatically)
+- Gender
+- Height (ft/in)
+- Weight (lbs)
+
+### 2. Fitness Goals
+- Main Goal (lose/gain/maintain weight, build endurance)
+- Target Weight (lbs)
+- Active Days Per Week (1–7)
+- Focus Areas (multi-select)
+- Timeline for Results (slider: 1 month → 2+ years)
+- Any Injuries? (yes/no + details)
+- Medical Conditions (multi-select + “other” field)
+
+### 3. Body Type
+- Somatotype: Ectomorph / Mesomorph / Endomorph
+- Fat Distribution: Android / Gynoid / Other (text)
+
+### 4. Workout Preferences
+- Equipment Access: Bodyweight / Dumbbells / Full Gym
+- Workout Duration: 20–30 / 30–60 / 60–90 / 90+ min
+- Weight Change Difficulty:
+  - Hard to gain
+  - Hard to lose
+  - Want help building muscle effectively
+- Routine Type Preference:
+  - Fun-based
+  - Balanced
+  - Progress Overload (recommended)
+
+### 5. Diet & Lifestyle
+- Diet Quality (Unhealthy → Very Healthy)
+- Dietary Restrictions (multi-select)
+- Eating Style (emotional, bored, unconscious, habitual, energy-driven)
+- Average Sleep (under 5h → over 8h)
+
+---
+
+📊 Algorithm & Output Logic (Run After Questionnaire):
+
+Use this collected data to trigger an algorithmic generation system that calculates and creates:
+
+1. **Macros**: Based on TDEE = BMR × Activity Factor  
+   - Use Mifflin-St Jeor Equation for BMR  
+   - Macronutrient targets (based on goal & body type)
+
+2. **Water Intake**:  
+   - Start at 0.5–1 oz per pound of body weight  
+   - Adjust slightly based on training intensity & gender
+
+3. **Workout Plan**:  
+   - Choose from stored templates or generate dynamically:
+     - Duration → dictates session length
+     - Equipment access → filters eligible exercises
+     - Goal → selects workout split (e.g. full-body, PPL, etc.)
+     - Experience → scales difficulty and volume
+
+4. **Nutrition Plan**:
+   - Select meals from template bank based on:
+     - Macro needs
+     - Dietary restrictions
+     - Simplicity preference
+     - Budget if implemented
+
+---
+
+✅ Final Output (Post-Onboarding Summary Screen):
+After form submission, show a card-based UI with:
+- Recommended daily calories & macros
+- Personalized workout split preview
+- Meal plan summary (with edit option)
+- Water intake recommendation
+
+Then ask:  
+**“Ready to launch your plan?”** → User clicks **[Confirm]**  
+System then saves the generated plan to the user's profile in Supabase.
+
+---
+
+🧩 Implementation Notes:
+- Save user profile inputs and results in a new `user_onboarding_data` table in Supabase
+- Reference this data when generating workouts, meal plans, or progress tracking
+- Allow user to **re-take or edit onboarding anytime** via Profile or Settings
+- Ensure onboarding data loads only once unless reset
+
+---
+
+Bonus:
+- Add a “Load Previous Results” if user returns after uninstalling or logging in from a new device.
+- Cache output in local storage for smoother experience post-onboarding.
