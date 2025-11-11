@@ -70,6 +70,10 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToSignIn }
       });
 
       if (signUpError) {
+        console.error('🔴 Sign up error details:', signUpError);
+        console.error('🔴 Error message:', signUpError.message);
+        console.error('🔴 Full error object:', JSON.stringify(signUpError, null, 2));
+        
         if (signUpError.message.includes('already registered')) {
           setError('This email is already registered. Please sign in instead.');
         } else if (signUpError.message.includes('invalid email')) {
