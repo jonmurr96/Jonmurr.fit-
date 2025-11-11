@@ -507,9 +507,19 @@ const WaterWidget: React.FC<{
 
     return (
         <div 
-            className="bg-zinc-900 rounded-2xl p-4 cursor-pointer hover:bg-zinc-800 transition-colors"
+            className="bg-zinc-900 rounded-2xl p-4 cursor-pointer hover:bg-zinc-800 transition-colors relative"
             onClick={() => setActiveScreen('progress')}
         >
+            <button 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveScreen('progress');
+                }}
+                className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10" 
+                aria-label="Edit water goal"
+            >
+                <PencilIcon className="w-5 h-5" />
+            </button>
             <h3 className="font-bold text-white mb-3 text-lg">Water Intake</h3>
             <div className="flex items-center justify-between">
                 <div className="relative w-20 h-20 flex-shrink-0">
