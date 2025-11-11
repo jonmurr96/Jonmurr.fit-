@@ -3,6 +3,17 @@
 ## Overview
 Jonmurr.fit is an AI-powered fitness tracking application built with React, TypeScript, and Vite. Its core purpose is to provide personalized workout planning and meal suggestions using Google's Gemini AI. The project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve their health goals. The business vision is to provide a comprehensive, engaging, and personalized fitness solution that stands out in the market by leveraging AI for tailored guidance and gamification for sustained user engagement.
 
+## Recent Changes (November 11, 2025)
+- **Database Service Refactoring (Completed)**: All 6 database services refactored to closure-based factory pattern for multi-user support:
+  - `mealService` → `createMealService(userId)` - Meal logging, daily logs, quick-add meals
+  - `userService` → `createUserService(userId)` - User profiles and macro targets  
+  - `progressService` → `createProgressService(userId)` - Weight, water, photos, milestones
+  - `mealPlanService` → `createMealPlanService(userId)` - Generated meal plans management
+  - `workoutService` → `createWorkoutService(userId)` - Training programs, workouts, exercises, sets, history
+  - `gamificationService` → `createGamificationService(userId)` - XP, streaks, badges, challenges, loot, AI usage
+- **Refactoring Pattern**: Eliminated all `this` bindings, using closure-based functions that capture `userId` from factory scope. Private helpers (e.g., `mapProgramFromDb`, `getMetricValue`) lifted into closure scope. Each service exports both factory function and default instance for backward compatibility.
+- **Next Steps**: Create `useUserServices` hook to provide authenticated service instances throughout the app, then apply Row-Level Security (RLS) policies to all 23 Supabase tables for complete multi-user data isolation.
+
 ## User Preferences
 None documented yet - this is a fresh import.
 
@@ -44,6 +55,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Modular Component Architecture**: UI is built with reusable components for maintainability.
 - **Auth Service Layer**: Dedicated service for all authentication and user profile operations with error typing.
 - **AuthContext Provider**: Manages session, token refresh, and profile loading.
+- **Database Service Architecture**: All 6 database services use factory pattern (`createXService(userId)`) with closure-based functions for multi-user support. No `this` bindings - all methods capture userId from factory scope. Exports both factory function and default singleton instance for gradual migration.
 
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.
