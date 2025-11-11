@@ -1,201 +1,51 @@
 # Jonmurr.fit - AI Fitness Coach
 
 ## Overview
-Jonmurr.fit is an AI-powered fitness tracking application built with React, TypeScript, and Vite. Its core purpose is to provide personalized workout planning and meal suggestions using Google's Gemini AI. The project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve their health goals.
+Jonmurr.fit is an AI-powered fitness tracking application built with React, TypeScript, and Vite. Its core purpose is to provide personalized workout planning and meal suggestions using Google's Gemini AI. The project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve their health goals. The business vision is to provide a comprehensive, engaging, and personalized fitness solution that stands out in the market by leveraging AI for tailored guidance and gamification for sustained user engagement.
 
 ## User Preferences
 None documented yet - this is a fresh import.
 
-## Recent Changes (Nov 11, 2025)
-
-### User Authentication System Implementation (Nov 11, 2025)
-- **🔐 Supabase Auth Integration**: Complete authentication system with email/password flows
-  - **Auth Service Layer** (`services/authService.ts`): Handles sign-up, sign-in, sign-out, password reset, profile management with proper error typing (DatabaseError union)
-  - **AuthContext Provider** (`contexts/AuthContext.tsx`): Session management with automatic token refresh, retry logic for profile loading (handles 406 errors from trigger delays)
-  - **Protected Routes** (`AppWithAuth.tsx`): Conditional rendering based on auth state → Not authenticated: AuthRouter, Authenticated + incomplete onboarding: OnboardingScreen, Authenticated + complete: Main App
-  
-- **📱 Auth Screens** (Fitness app branding with glassmorphism design):
-  - **SignInScreen**: Email/password login with forgot password link
-  - **SignUpScreen**: Registration with validation (fullName, username, email, password confirmation), success state shows email verification prompt
-  - **ForgotPasswordScreen**: Password reset flow with email link
-  - **OnboardingScreen**: Collects fitness goal on first login (Muscle Gain, Fat Loss, Strength, Endurance, Recomposition, General Fitness)
-  
-- **🗄️ Database Migration** (`supabase/migration_users_auth.sql`):
-  - **users table**: Stores user profiles (id, full_name, username, avatar_url, fitness_goal, onboarding_complete)
-  - **Auto-creation trigger**: Automatically creates user profile when auth.users signup occurs (handles metadata from signup)
-  - **RLS Policies**: Row Level Security enabled with policies for SELECT/UPDATE/DELETE scoped to auth.uid()
-  
-- **⚠️ Known Limitations** (Pre-Production):
-  - Database services still use hardcoded `USER_ID = 'default_user'` - requires factory pattern refactoring to use authenticated user_id
-  - No Settings/Profile screen yet for profile editing and account management
-  - RLS policies not yet applied to existing 23 fitness tracking tables (workout_history, meals_log, etc.)
-  - Loading states and error feedback need enhancement across auth flows
-  - Account deletion only removes users table row, doesn't delete auth.users (requires service-role key or server-side function)
-  
-- **📋 Next Steps for Production**:
-  1. Refactor database services to use factory pattern: `createMealService(userId)` + `useUserServices` hook
-  2. Apply RLS policies to all existing tables for data isolation
-  3. Build Settings screen with profile editing, password reset, logout, account deletion
-  4. Apply `supabase/migration_users_auth.sql` migration to development database
-  5. End-to-end testing of complete auth flow
-
-## Recent Changes (Nov 10, 2025)
-
-### Progress Hub UI Refactor (Latest - Nov 10, 2025)
-- **🎯 Eliminated Cluttered Tab Navigation**: Replaced horizontal tab bar with scroll spy navigation
-  - **Problem Solved**: Tab bar was overcrowded (6 tabs) and falling off screen on mobile
-  - **Solution**: Progress Hub with sticky chip navigation and scrollable sections
-  
-- **📜 Scroll Spy Navigation**: IntersectionObserver-based active section tracking
-  - Sticky chip bar at top auto-highlights as you scroll
-  - Smooth scroll to sections when chips clicked
-  - Mobile-friendly chip wrapping (2 rows)
-  - Proper scroll offset accounting for sticky header (140px)
-  
-- **🏗️ Component Architecture**:
-  - `components/progress/ScrollSpyContext.tsx`: Context provider managing scroll spy state
-  - `components/progress/ProgressSection.tsx`: Reusable section wrapper with auto-registration
-  - `components/progress/StickySectionChips.tsx`: Sticky chip navigation component
-  - All 6 sections now visible simultaneously: Summary, Weight, Water, Activity, Photos, Rewards
-  
-- **✅ Benefits**:
-  - No more horizontal scrolling or overflow
-  - See all progress data by scrolling
-  - Heat map beautifully integrated as "Activity" section
-  - All existing functionality preserved (modals, charts, gamification)
-  - Clean, modern UI matching fitness app aesthetic
-  
-- **✅ Architect Approved**: Full implementation reviewed and production-ready
-
-### Heat Map System Implementation (Nov 10, 2025)
-- **📅 Daily Activity Tracking**: Implemented comprehensive heat map visualization system
-  - **Database Schema**: Created `daily_activity_summary` table tracking workout/meal/water activity
-  - **Activity Levels**: 6-tier color coding system:
-    - Gray (none): No activity logged
-    - Red (low): 1 activity type logged
-    - Orange (moderate): 2 activity types logged  
-    - Green (complete): All 3 activities logged
-    - Diamond (perfect): All 3 activities + macro goals met (purple-to-pink gradient)
-    - Blue (rest): Designated rest day
-  - **SQL Migration**: `supabase/migration_heat_map.sql` ready to apply
-  
-- **🗓️ MiniHeatMap Component**: 14-day horizontal activity strip
-  - Displays last 14 days of activity with colored squares
-  - Interactive hover showing day details (date, activity level)
-  - Compact legend showing all activity levels
-  - Integrated into HomeScreen below XP bar
-  
-- **📊 FullHeatMap Component**: Monthly calendar view with filters
-  - Monthly calendar grid showing full month of activity
-  - Filter toggles for workouts, meals, and water tracking
-  - Month navigation (previous/next/current month)
-  - Click any day to open detailed activity modal
-  - Integrated into ProgressScreen as new "Heat Map" tab
-  
-- **🔍 DayDetailModal**: Comprehensive daily activity breakdown
-  - Shows workout completion status
-  - Displays meals logged count
-  - Shows water intake progress with oz tracking
-  - Lists all macro goals met (protein, carbs, fats, calories)
-  - Activity level badge with color coding
-  - Rest day indicator
-  
-- **🏅 Heat Map Badges**: 3 new achievement badges added to gamification
-  - **Green Week** 🟢: Achieve 7+ consecutive complete days (Bronze: 7, Silver: 21, Gold: 49, Diamond: 98 days) - Streak-based
-  - **Perfect Day Pro** 💎: Total perfect days achieved (Bronze: 1, Silver: 5, Gold: 15, Diamond: 30 days) - Count-based
-  - **Activity Master** ⚡: Maintain daily activity streaks (Bronze: 7, Silver: 14, Gold: 30, Diamond: 60 days) - Streak-based
-  - All badges award standard tier XP: Bronze 25 XP, Silver 50 XP, Gold 100 XP, Diamond 200 XP
-  
-- **⚙️ Technical Implementation**:
-  - `hooks/useHeatMap.ts`: Custom hook managing heat map data fetching and caching
-  - `services/database/heatMapService.ts`: Service layer for activity calculations and database queries
-  - `components/heatmap/`: Modular components (MiniHeatMap, FullHeatMap, DayDetailModal)
-  - `utils/gamification.ts`: Badge definitions integrated into existing system
-  
-- **📋 Database Migration**: ✅ Successfully applied
-  - `supabase/migration_heat_map.sql`: Creates daily_activity_summary table and RPC functions
-  - Migration applied Nov 10, 2025 - Heat map system now fully operational
-  
-- **✅ Architect Approved**: Full implementation reviewed and production-ready
-
-### XP Toast Bug Fix (Nov 9, 2025 @ 8:57 PM)
-- **🐛 Fixed Stuck XP Toast**: Resolved issue where XP toasts wouldn't dismiss and blocked screen
-  - **Root Cause**: Water logging awarded 10 XP on EVERY slider adjustment, creating endless toast queue
-  - **The Fix**: Added daily guard for water XP (only awards once per day on first log)
-  - **How It Works**: Uses `jonmurrfit-lastWaterXpAward` localStorage check (same pattern as protein/macro goals)
-  - **Result**: Toasts now properly auto-dismiss after 3 seconds, no more blocking screen
-- **🎯 Additional XP Fixes**:
-  - Changed protein goal from 0 XP to 25 XP for meaningful rewards
-  - All daily XP awards now have proper guards: water (10 XP), protein goal (25 XP), macro goals (50 XP)
-  - Toast queue system confirmed working - each toast dismisses after timeout, queue advances properly
-
-### Workout Status System Implementation (Nov 9, 2025 @ 6:05 PM)
-- **🏷️ Status Tagging System**: Implemented Active/Inactive/Draft workflow status system
-  - Added `status: 'active' | 'inactive' | 'draft'` field to SavedWorkout type
-  - Created `StatusBadge` component with color-coded tags (Active=green, Inactive=gray, Draft=yellow)
-  - **Single Active Plan Rule**: Only ONE workout can be active at a time (enforced by setActiveWorkout)
-  - Users can save unlimited workouts but must designate one as their active plan
-- **🎯 Smart UI Organization**: TrainScreen now organizes workouts by status
-  - **Active Plan** section (if exists) → Shows current active workout at top
-  - **Drafts** section (if exist) → Shows incomplete/experimental workouts
-  - **My Library** section → Shows all inactive saved workouts
-  - Each workout card displays StatusBadge next to title
-  - "Set as Active" button on inactive workouts
-- **⚡ HomeScreen QuickStart Update**: Now shows ONLY the active plan
-  - QuickStart card displays the single active workout (if one exists)
-  - Added "Active Plan" label for clarity
-  - Card hidden entirely if no active plan is set
-  - Removed old pinned/recent logic in favor of explicit active status
-- **🔄 Backward Compatibility**: Normalization useEffect backfills existing workouts
-  - All saved workouts without status automatically set to 'inactive'
-  - Runs once on app mount, guards against re-renders
-  - Ensures smooth transition for users with existing workout libraries
-- **💾 Database Migration Pending**: Supabase migration needed for persistence
-  - Status field currently client-side only (localStorage)
-  - Future migration: Add status column to saved_workouts table with default 'inactive'
-  - Will enable cross-device status synchronization
-- **✅ Architect Approved**: Full implementation reviewed and passed
-
 ## System Architecture
 
 ### UI/UX Decisions
-The application features a modern, engaging design with a focus on gamification. Key UI/UX elements include:
-- Glassmorphism action cards with backdrop blur and gradient overlays.
-- Primary AI card highlighted with green gradient and shimmer effect.
-- Microinteractions such as hover scale, focus rings, and transform animations.
-- Mobile-first responsive design, adapting layouts for different screen sizes.
-- Color-coded badges for workout statuses (Active, Inactive, Draft) and tiered progression (Bronze, Silver, Gold, Diamond).
-- UI elements for gamification like level-up modals, XP toasts, badge unlock modals, and mystery chest modals.
+The application features a modern, engaging design with a focus on gamification, utilizing glassmorphism action cards with backdrop blur and gradient overlays. Key elements include a primary AI card highlighted with a green gradient and shimmer effect, microinteractions (hover scale, focus rings, transform animations), and a mobile-first responsive design. The UI incorporates color-coded badges for workout statuses (Active, Inactive, Draft) and tiered progression (Bronze, Silver, Gold, Diamond), alongside gamification elements like level-up modals, XP toasts, badge unlock modals, and mystery chest modals. The Progress Hub uses scroll spy navigation with sticky chip navigation to improve user experience.
 
 ### Technical Implementations
 - **Frontend**: React 19.2.0 with TypeScript, built using Vite 6.2.0.
-- **AI Integration**: Google Gemini API for workout and meal plan generation, utilizing a single API call for parsing and review to optimize speed.
-- **Styling**: Tailwind CSS is used for rapid and consistent styling.
-- **Charts**: Recharts library for data visualization and progress tracking.
-- **Database**: Supabase serves as the backend, managing user data, workout logs, meal entries, and gamification state across 23 tables.
-- **Exercise Database**: Integration with the WGER API for a comprehensive exercise library.
-- **Workout Status System**: Implements an 'active', 'inactive', 'draft' status for workouts, enforcing a single active plan rule.
-- **Gamification System**: A comprehensive system featuring:
-    - **Tiered Badge Progression**: Badges across 8 categories with Bronze, Silver, Gold, Diamond tiers and associated XP rewards.
+- **AI Integration**: Google Gemini API for workout and meal plan generation, optimized for single API calls.
+- **Styling**: Tailwind CSS for rapid and consistent styling.
+- **Charts**: Recharts library for data visualization.
+- **Database**: Supabase for backend, managing user data, workout logs, meal entries, and gamification state across 23 tables, including a `daily_activity_summary` table for heat map tracking.
+- **Exercise Database**: WGER API integration for a comprehensive exercise library.
+- **Authentication**: Supabase Auth for email/password flows, session management, and protected routes, with a `users` table for user profiles and RLS policies.
+- **Workout Status System**: Implements 'active', 'inactive', 'draft' statuses for workouts, enforcing a single active plan rule, and smart UI organization.
+- **Gamification System**:
+    - **Tiered Badge Progression**: Badges across 8 categories (Bronze, Silver, Gold, Diamond tiers) with XP rewards, including new badges for heat map achievements (Green Week, Perfect Day Pro, Activity Master).
     - **100-Level System**: Exponential XP curve with rank titles and level-based perks.
-    - **Loot/Rewards System**: Mystery chests with weighted random rewards unlocked at milestone levels.
+    - **Loot/Rewards System**: Mystery chests with weighted random rewards at milestone levels.
     - **Challenge System**: Weekly, monthly, and recovery challenges.
-    - **XP Triggers**: Integrated XP rewards for workouts, meals, water tracking, and AI usage, including specific rewards for hitting macro goals.
+    - **XP Triggers**: Integrated XP for workouts, meals, water tracking, and AI usage, with guards to prevent exploit, and specific rewards for hitting macro goals.
+- **Heat Map System**: Daily activity tracking with a 6-tier color-coding system (Gray, Red, Orange, Green, Diamond, Blue) visualized in MiniHeatMap (14-day strip) and FullHeatMap (monthly calendar) components, with a DayDetailModal for comprehensive daily activity breakdown.
 
 ### Feature Specifications
 - **Daily Macro Tracking**: Users can log and track calories, protein, carbohydrates, and fats.
-- **AI-Powered Planning**: Generation of personalized workout routines and meal plans based on user input and targets.
-- **Progress Visualization**: Charts and graphs to track fitness journey and achievements.
+- **AI-Powered Planning**: Generation of personalized workout routines and meal plans.
+- **Progress Visualization**: Charts, graphs, and heat maps to track fitness journey and achievements.
 - **Workout Management**: Users can save, organize by status (Active, Draft, Library), and set active workout plans.
 - **Health Checks**: An integrated health check system detects missing Supabase tables and guides users through schema application.
+- **User Authentication**: Secure sign-up, sign-in, password reset, profile management, and onboarding for fitness goals.
+- **Settings/Profile Management**: Full-featured profile and account management including updating user profile, password, and account deletion with validation and secure procedures.
 
 ### System Design Choices
-- **Client-Side AI Calls**: Direct API calls to Google's Gemini service are made from the browser, with API keys bundled client-side.
-- **Replit Compatibility**: Configured for Replit with dev server on port 5000, host 0.0.0.0, and `allowedHosts: true` for proxy support.
-- **Data Persistence**: Replaced local storage with Supabase for persistent data storage across sessions and devices.
+- **Client-Side AI Calls**: Direct API calls to Google's Gemini service from the browser, with API keys bundled client-side.
+- **Replit Compatibility**: Configured for Replit with dev server on port 5000, host 0.0.0.0, and `allowedHosts: true`.
+- **Data Persistence**: Supabase for persistent data storage across sessions and devices.
 - **Modular Component Architecture**: UI is built with reusable components for maintainability.
+- **Auth Service Layer**: Dedicated service for all authentication and user profile operations with error typing.
+- **AuthContext Provider**: Manages session, token refresh, and profile loading.
 
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.
-- **Supabase**: Backend-as-a-service for database management and authentication.
+- **Supabase**: Backend-as-a-service for database management, authentication, and real-time features.
 - **WGER API**: Provides access to a comprehensive exercise database.

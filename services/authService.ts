@@ -210,3 +210,28 @@ class AuthService {
 }
 
 export const authService = new AuthService();
+
+export const updateUserProfile = async (
+  userId: string,
+  updates: Partial<Omit<UserProfileData, 'id' | 'created_at' | 'updated_at'>>
+) => {
+  const { profile, error } = await authService.updateUserProfile(userId, updates);
+  if (error) {
+    throw new Error(error instanceof Error ? error.message : 'Failed to update profile');
+  }
+  return profile;
+};
+
+export const updateUserPassword = async (newPassword: string) => {
+  const { error } = await authService.updatePassword(newPassword);
+  if (error) {
+    throw new Error(error.message || 'Failed to update password');
+  }
+};
+
+export const deleteUserAccount = async (userId: string) => {
+  const { error } = await authService.deleteAccount(userId);
+  if (error) {
+    throw new Error(error instanceof Error ? error.message : 'Failed to delete account');
+  }
+};
