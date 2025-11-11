@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { OnboardingFormData, OnboardingStep } from '../../types/onboarding';
 import { calculateOnboardingResults, calculateAge } from '../../utils/onboardingCalculations';
+import { saveOnboardingData } from '../../services/onboardingService';
+import { useAuth } from '../../contexts/AuthContext';
 import ProgressIndicator from '../../components/onboarding/ProgressIndicator';
 import StepNavigation from '../../components/onboarding/StepNavigation';
 import PersonalInfoStep from './PersonalInfoStep';
@@ -23,6 +26,8 @@ const INITIAL_FORM_DATA: Partial<OnboardingFormData> = {
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('personal_info');
   const [formData, setFormData] = useState<Partial<OnboardingFormData>>(INITIAL_FORM_DATA);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (field: keyof OnboardingFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -143,6 +148,33 @@ export default function OnboardingScreen() {
     setFormData(prev => ({ ...prev, ...results }));
   };
 
+  const handleConfirmOnboarding = async () => {
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    try {
+      // Save onboarding data to Supabase
+      const response = await saveOnboardingData(user.id, formData as OnboardingFormData);
+      
+      if (!response.success) {
+        console.error('Failed to save onboarding data:', response.error);
+        alert('Failed to save your data. Please try again.');
+        return;
+      }
+
+      // TODO: Generate AI workout plan here
+      // const workoutPlan = await generateWorkoutPlan(formData);
+      
+      // Navigate to home screen
+      navigate('/');
+    } catch (error) {
+      console.error('Error during onboarding confirmation:', error);
+      alert('Something went wrong. Please try again.');
+    }
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 'personal_info':
@@ -159,10 +191,7 @@ export default function OnboardingScreen() {
         return (
           <SmartSummaryStep 
             formData={formData as OnboardingFormData} 
-            onConfirm={() => {
-              console.log('Onboarding confirmed!', formData);
-              // TODO: Save to Supabase and generate AI workout plan
-            }}
+            onConfirm={handleConfirmOnboarding}
             onBack={handleBack}
           />
         );

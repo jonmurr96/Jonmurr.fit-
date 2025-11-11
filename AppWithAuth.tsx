@@ -1,7 +1,7 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthRouter } from './components/AuthRouter';
-import { OnboardingScreen } from './screens/auth/OnboardingScreen';
+import OnboardingScreen from './screens/onboarding/OnboardingScreen';
 import App from './App';
 
 const AuthenticatedApp: React.FC = () => {
