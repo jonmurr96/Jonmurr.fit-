@@ -6,6 +6,39 @@ Jonmurr.fit is an AI-powered fitness tracking application built with React, Type
 ## User Preferences
 None documented yet - this is a fresh import.
 
+## Recent Changes (Nov 11, 2025)
+
+### User Authentication System Implementation (Nov 11, 2025)
+- **🔐 Supabase Auth Integration**: Complete authentication system with email/password flows
+  - **Auth Service Layer** (`services/authService.ts`): Handles sign-up, sign-in, sign-out, password reset, profile management with proper error typing (DatabaseError union)
+  - **AuthContext Provider** (`contexts/AuthContext.tsx`): Session management with automatic token refresh, retry logic for profile loading (handles 406 errors from trigger delays)
+  - **Protected Routes** (`AppWithAuth.tsx`): Conditional rendering based on auth state → Not authenticated: AuthRouter, Authenticated + incomplete onboarding: OnboardingScreen, Authenticated + complete: Main App
+  
+- **📱 Auth Screens** (Fitness app branding with glassmorphism design):
+  - **SignInScreen**: Email/password login with forgot password link
+  - **SignUpScreen**: Registration with validation (fullName, username, email, password confirmation), success state shows email verification prompt
+  - **ForgotPasswordScreen**: Password reset flow with email link
+  - **OnboardingScreen**: Collects fitness goal on first login (Muscle Gain, Fat Loss, Strength, Endurance, Recomposition, General Fitness)
+  
+- **🗄️ Database Migration** (`supabase/migration_users_auth.sql`):
+  - **users table**: Stores user profiles (id, full_name, username, avatar_url, fitness_goal, onboarding_complete)
+  - **Auto-creation trigger**: Automatically creates user profile when auth.users signup occurs (handles metadata from signup)
+  - **RLS Policies**: Row Level Security enabled with policies for SELECT/UPDATE/DELETE scoped to auth.uid()
+  
+- **⚠️ Known Limitations** (Pre-Production):
+  - Database services still use hardcoded `USER_ID = 'default_user'` - requires factory pattern refactoring to use authenticated user_id
+  - No Settings/Profile screen yet for profile editing and account management
+  - RLS policies not yet applied to existing 23 fitness tracking tables (workout_history, meals_log, etc.)
+  - Loading states and error feedback need enhancement across auth flows
+  - Account deletion only removes users table row, doesn't delete auth.users (requires service-role key or server-side function)
+  
+- **📋 Next Steps for Production**:
+  1. Refactor database services to use factory pattern: `createMealService(userId)` + `useUserServices` hook
+  2. Apply RLS policies to all existing tables for data isolation
+  3. Build Settings screen with profile editing, password reset, logout, account deletion
+  4. Apply `supabase/migration_users_auth.sql` migration to development database
+  5. End-to-end testing of complete auth flow
+
 ## Recent Changes (Nov 10, 2025)
 
 ### Progress Hub UI Refactor (Latest - Nov 10, 2025)

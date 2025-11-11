@@ -31,13 +31,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUserProfile = async (userId: string) => {
-    const { profile, error } = await authService.getUserProfile(userId);
-    if (error) {
-      console.error('Error loading user profile:', error);
+  const loadUserProfile = async (userId: string, retries = 3): Promise<void> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const { profile, error } = await authService.getUserProfile(userId);
+      
+      if (profile) {
+        setUserProfile(profile);
+        return;
+      }
+      
+      if (error && 'code' in error && error.code === 'PGRST116') {
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 500));
+          continue;
+        }
+      }
+      
+      if (error) {
+        console.error('Error loading user profile:', error);
+      }
       setUserProfile(null);
-    } else {
-      setUserProfile(profile);
+      return;
     }
   };
 
