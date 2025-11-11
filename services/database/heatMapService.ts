@@ -29,54 +29,71 @@ export interface HeatMapDay {
     is_rest_day: boolean;
 }
 
-class HeatMapService {
-    /**
-     * Calculate activity level based on daily summary
-     * Returns: none (gray), low (red), moderate (orange), complete (green), perfect (diamond), rest (blue)
-     */
-    calculateActivityLevel(summary: Partial<DailyActivitySummary>): ActivityLevel {
-        if (summary.is_rest_day) {
-            return 'rest';
-        }
+export interface HeatMapStats {
+    totalDays: number;
+    activeDays: number;
+    completeDays: number;
+    perfectDays: number;
+    restDays: number;
+    currentStreak: number;
+    longestStreak: number;
+}
 
-        const hasWorkout = summary.workout_logged === true;
-        const hasMeals = (summary.meals_logged || 0) >= 2;
-        const hasWater = (summary.water_intake_oz || 0) >= (summary.goal_water_oz || 0) && (summary.goal_water_oz || 0) > 0;
+export interface HeatMapService {
+    upsertDailyActivity(date: string, data: Partial<Omit<DailyActivitySummary, 'id' | 'user_id' | 'date' | 'created_at' | 'updated_at'>>): Promise<DailyActivitySummary | null>;
+    getHeatMapData(startDate: string, endDate: string): Promise<HeatMapDay[]>;
+    getHeatMapStats(startDate: string, endDate: string): Promise<HeatMapStats>;
+    markRestDay(date: string): Promise<void>;
+    unmarkRestDay(date: string): Promise<void>;
+}
 
-        const activitiesCompleted = [hasWorkout, hasMeals, hasWater].filter(Boolean).length;
-
-        // Perfect day: all 3 activities + hit macros
-        if (activitiesCompleted === 3 && summary.hit_macros) {
-            return 'perfect';
-        }
-
-        // Complete day: all 3 activities
-        if (activitiesCompleted === 3) {
-            return 'complete';
-        }
-
-        // Moderate: 2 activities
-        if (activitiesCompleted === 2) {
-            return 'moderate';
-        }
-
-        // Low: 1 activity
-        if (activitiesCompleted === 1) {
-            return 'low';
-        }
-
-        // None: no activities
-        return 'none';
+export const calculateActivityLevel = (summary: Partial<DailyActivitySummary>): ActivityLevel => {
+    if (summary.is_rest_day) {
+        return 'rest';
     }
 
-    /**
-     * Upsert daily activity summary for a user
-     */
-    async upsertDailyActivity(
-        userId: string,
+    const hasWorkout = summary.workout_logged === true;
+    const hasMeals = (summary.meals_logged || 0) >= 2;
+    const hasWater = (summary.water_intake_oz || 0) >= (summary.goal_water_oz || 0) && (summary.goal_water_oz || 0) > 0;
+
+    const activitiesCompleted = [hasWorkout, hasMeals, hasWater].filter(Boolean).length;
+
+    if (activitiesCompleted === 3 && summary.hit_macros) {
+        return 'perfect';
+    }
+
+    if (activitiesCompleted === 3) {
+        return 'complete';
+    }
+
+    if (activitiesCompleted === 2) {
+        return 'moderate';
+    }
+
+    if (activitiesCompleted === 1) {
+        return 'low';
+    }
+
+    return 'none';
+};
+
+export const getMonthBoundaries = (year: number, month: number): { startDate: string; endDate: string } => {
+    const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    return { startDate, endDate };
+};
+
+export const getLastNDaysBoundaries = (days: number): { startDate: string; endDate: string } => {
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return { startDate, endDate };
+};
+
+export const createHeatMapService = (userId: string): HeatMapService => {
+    const upsertDailyActivity = async (
         date: string,
         data: Partial<Omit<DailyActivitySummary, 'id' | 'user_id' | 'date' | 'created_at' | 'updated_at'>>
-    ): Promise<DailyActivitySummary | null> {
+    ): Promise<DailyActivitySummary | null> => {
         try {
             const { data: result, error } = await supabase.rpc('upsert_daily_activity', {
                 p_user_id: userId,
@@ -96,12 +113,9 @@ class HeatMapService {
             console.error('Error upserting daily activity:', error);
             return null;
         }
-    }
+    };
 
-    /**
-     * Get heat map data for a date range
-     */
-    async getHeatMapData(userId: string, startDate: string, endDate: string): Promise<HeatMapDay[]> {
+    const getHeatMapData = async (startDate: string, endDate: string): Promise<HeatMapDay[]> => {
         try {
             const { data, error } = await supabase
                 .from('daily_activity_summary')
@@ -113,7 +127,6 @@ class HeatMapService {
 
             if (error) throw error;
 
-            // Fill in missing dates with 'none' level
             const heatMapDays: HeatMapDay[] = [];
             const currentDate = new Date(startDate);
             const end = new Date(endDate);
@@ -125,7 +138,7 @@ class HeatMapService {
                 if (summary) {
                     heatMapDays.push({
                         date: dateStr,
-                        level: this.calculateActivityLevel(summary),
+                        level: calculateActivityLevel(summary),
                         workout_logged: summary.workout_logged,
                         meals_logged: summary.meals_logged,
                         water_intake_oz: summary.water_intake_oz,
@@ -156,39 +169,25 @@ class HeatMapService {
             console.error('Error fetching heat map data:', error);
             return [];
         }
-    }
+    };
 
-    /**
-     * Get heat map summary stats for a date range
-     */
-    async getHeatMapStats(userId: string, startDate: string, endDate: string): Promise<{
-        totalDays: number;
-        activeDays: number;
-        completeDays: number;
-        perfectDays: number;
-        restDays: number;
-        currentStreak: number;
-        longestStreak: number;
-    }> {
-        const heatMapData = await this.getHeatMapData(userId, startDate, endDate);
+    const getHeatMapStats = async (startDate: string, endDate: string): Promise<HeatMapStats> => {
+        const heatMapData = await getHeatMapData(startDate, endDate);
 
         const activeDays = heatMapData.filter(d => d.level !== 'none').length;
         const completeDays = heatMapData.filter(d => d.level === 'complete' || d.level === 'perfect').length;
         const perfectDays = heatMapData.filter(d => d.level === 'perfect').length;
         const restDays = heatMapData.filter(d => d.level === 'rest').length;
 
-        // Calculate current streak (complete or perfect days from most recent backwards)
         let currentStreak = 0;
         for (let i = heatMapData.length - 1; i >= 0; i--) {
             if (heatMapData[i].level === 'complete' || heatMapData[i].level === 'perfect') {
                 currentStreak++;
             } else if (heatMapData[i].level !== 'rest') {
-                // Stop counting if we hit a non-rest, non-complete day
                 break;
             }
         }
 
-        // Calculate longest streak
         let longestStreak = 0;
         let tempStreak = 0;
         for (const day of heatMapData) {
@@ -209,39 +208,23 @@ class HeatMapService {
             currentStreak,
             longestStreak,
         };
-    }
+    };
 
-    /**
-     * Mark a day as a rest day
-     */
-    async markRestDay(userId: string, date: string): Promise<void> {
-        await this.upsertDailyActivity(userId, date, { is_rest_day: true });
-    }
+    const markRestDay = async (date: string): Promise<void> => {
+        await upsertDailyActivity(date, { is_rest_day: true });
+    };
 
-    /**
-     * Unmark a rest day
-     */
-    async unmarkRestDay(userId: string, date: string): Promise<void> {
-        await this.upsertDailyActivity(userId, date, { is_rest_day: false });
-    }
+    const unmarkRestDay = async (date: string): Promise<void> => {
+        await upsertDailyActivity(date, { is_rest_day: false });
+    };
 
-    /**
-     * Get month boundaries for navigation
-     */
-    getMonthBoundaries(year: number, month: number): { startDate: string; endDate: string } {
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-        return { startDate, endDate };
-    }
+    return {
+        upsertDailyActivity,
+        getHeatMapData,
+        getHeatMapStats,
+        markRestDay,
+        unmarkRestDay,
+    };
+};
 
-    /**
-     * Get last N days boundaries
-     */
-    getLastNDaysBoundaries(days: number): { startDate: string; endDate: string } {
-        const endDate = new Date().toISOString().split('T')[0];
-        const startDate = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        return { startDate, endDate };
-    }
-}
-
-export const heatMapService = new HeatMapService();
+export const heatMapService = createHeatMapService('default_user');

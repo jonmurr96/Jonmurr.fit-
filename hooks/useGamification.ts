@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { gamificationService } from '../services/database';
+import { useUserServices } from './useUserServices';
 import { GamificationState, ExtendedLevelInfo, UnlockedLoot, EarnedBadge } from '../types';
 import { calculateExtendedLevelInfo } from '../utils/gamification';
 
@@ -34,6 +34,8 @@ export interface GamificationFeedback {
 }
 
 export const useGamification = () => {
+  const { gamificationService } = useUserServices();
+
   const [gamificationData, setGamificationData] = useState<GamificationState>({
     xp: 0,
     streaks: {
@@ -70,7 +72,7 @@ export const useGamification = () => {
       }
     };
     init();
-  }, []);
+  }, [gamificationService]);
 
   // Award XP with full context and badge checking
   const awardXpWithContext = useCallback(async (

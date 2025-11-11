@@ -1,15 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { heatMapService, HeatMapDay } from '../services/database/heatMapService';
-
-interface HeatMapStats {
-    totalDays: number;
-    activeDays: number;
-    completeDays: number;
-    perfectDays: number;
-    restDays: number;
-    currentStreak: number;
-    longestStreak: number;
-}
+import { createHeatMapService, getLastNDaysBoundaries, HeatMapDay, HeatMapStats } from '../services/database/heatMapService';
 
 export const useHeatMap = (userId: string | null, days: number = 14) => {
     const [heatMapData, setHeatMapData] = useState<HeatMapDay[]>([]);
@@ -32,11 +22,12 @@ export const useHeatMap = (userId: string | null, days: number = 14) => {
 
         try {
             setIsLoading(true);
-            const { startDate, endDate } = heatMapService.getLastNDaysBoundaries(days);
+            const heatMapService = createHeatMapService(userId);
+            const { startDate, endDate } = getLastNDaysBoundaries(days);
             
             const [data, statsData] = await Promise.all([
-                heatMapService.getHeatMapData(userId, startDate, endDate),
-                heatMapService.getHeatMapStats(userId, startDate, endDate),
+                heatMapService.getHeatMapData(startDate, endDate),
+                heatMapService.getHeatMapStats(startDate, endDate),
             ]);
 
             setHeatMapData(data);
@@ -54,13 +45,15 @@ export const useHeatMap = (userId: string | null, days: number = 14) => {
 
     const markRestDay = useCallback(async (date: string) => {
         if (!userId) return;
-        await heatMapService.markRestDay(userId, date);
+        const heatMapService = createHeatMapService(userId);
+        await heatMapService.markRestDay(date);
         await fetchHeatMapData();
     }, [userId, fetchHeatMapData]);
 
     const unmarkRestDay = useCallback(async (date: string) => {
         if (!userId) return;
-        await heatMapService.unmarkRestDay(userId, date);
+        const heatMapService = createHeatMapService(userId);
+        await heatMapService.unmarkRestDay(date);
         await fetchHeatMapData();
     }, [userId, fetchHeatMapData]);
 
