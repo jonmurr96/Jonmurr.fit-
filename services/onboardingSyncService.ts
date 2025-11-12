@@ -174,6 +174,11 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
           mealSimplicity: 'Moderate variety',
           sleep: mapSleepDuration(onboardingData.averageSleepHours),
           waterIntake: mapWaterIntake(onboardingData.waterIntakeOz),
+          // Pass calculated macro targets from onboarding for exact matching
+          targetCalories: onboardingData.dailyCalories,
+          targetProtein: onboardingData.proteinG,
+          targetCarbs: onboardingData.carbsG,
+          targetFat: onboardingData.fatsG,
         };
 
         const generatedMealPlan = await generateMealPlan(mealPreferences);
