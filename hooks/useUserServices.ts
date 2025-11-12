@@ -7,6 +7,7 @@ import { createMealPlanService, MealPlanService } from '../services/database/mea
 import { createWorkoutService, WorkoutService } from '../services/database/workoutService';
 import { createGamificationService, GamificationService } from '../services/database/gamificationService';
 import { createHeatMapService, HeatMapService } from '../services/database/heatMapService';
+import { createFoodCatalogService, FoodCatalogService } from '../services/database/foodCatalogService';
 
 export interface UserServices {
   mealService: MealService;
@@ -16,6 +17,7 @@ export interface UserServices {
   workoutService: WorkoutService;
   gamificationService: GamificationService;
   heatMapService: HeatMapService;
+  foodCatalogService: FoodCatalogService;
 }
 
 export const useUserServices = (): UserServices => {
@@ -36,6 +38,7 @@ export const useUserServices = (): UserServices => {
       workoutService: createWorkoutService(userId),
       gamificationService: createGamificationService(userId),
       heatMapService: createHeatMapService(userId),
+      foodCatalogService: createFoodCatalogService(userId),
     }),
     [userId]
   );
