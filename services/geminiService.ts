@@ -329,8 +329,9 @@ export const generateMealPlan = async (preferences: NutritionPlanPreferences): P
     };
 
     try {
+        // Use flash model for faster meal plan generation (3-5x faster than pro)
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
