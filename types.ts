@@ -247,6 +247,11 @@ export interface NutritionPlanPreferences {
     waterIntake: WaterIntakeLevel;
     mealSimplicity: MealSimplicity;
     foodBudget: FoodBudget;
+    // Calculated macro targets from onboarding (optional - when provided, AI must match exactly)
+    targetCalories?: number;
+    targetProtein?: number;
+    targetCarbs?: number;
+    targetFat?: number;
 }
 
 export interface MealPlanItem {
