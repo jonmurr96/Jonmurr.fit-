@@ -5,6 +5,7 @@ import { ArrowsRightLeftIcon, PencilIcon, ChevronRightIcon, PinIcon, TrophyIcon,
 import { MiniHeatMap } from '../components/heatmap/MiniHeatMap';
 import { useHeatMap } from '../hooks/useHeatMap';
 import { SettingsScreen } from './SettingsScreen';
+import PersonalizedGoalsCard from '../components/PersonalizedGoalsCard';
 
 interface HomeScreenProps {
   user: UserProfile;
@@ -793,6 +794,8 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
       </div>
 
       <QuickStartCard savedWorkouts={savedWorkouts} onStart={handleStartWorkout} />
+
+      <PersonalizedGoalsCard />
 
       <div>
         <h2 className="text-xl font-bold">Recently uploaded</h2>

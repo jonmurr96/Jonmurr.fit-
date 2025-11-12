@@ -9,6 +9,7 @@ import { GamificationFeedback } from './components/gamification/GamificationFeed
 import { checkDatabaseHealth } from './services/database/healthCheck';
 import SetupModal from './components/SetupModal';
 import { getOnboardingData } from './services/onboardingService';
+import { useAuth } from './contexts/AuthContext';
 
 
 // Lazy load screen components for better performance
@@ -91,6 +92,7 @@ const ScreenLoader: React.FC = () => (
 );
 
 const App: React.FC = () => {
+    const { user: authUser } = useAuth();
     const { userService, mealService, workoutService, progressService, mealPlanService } = useUserServices();
 
     const useStickyState = <T,>(defaultValue: T, key: string): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -203,16 +205,20 @@ const App: React.FC = () => {
                 }
 
                 // Load water goal from onboarding data if available
-                try {
-                    const onboardingData = await getOnboardingData('default_user'); // TODO: Use actual userId from auth
-                    if (onboardingData?.waterIntakeOz) {
-                        console.log('💧 Loaded personalized water goal from onboarding:', onboardingData.waterIntakeOz, 'oz');
-                        setWaterGoal(onboardingData.waterIntakeOz);
-                    } else {
-                        console.log('⚠️ No onboarding water goal found, using default (128 oz)');
+                if (!authUser) {
+                    console.warn('⚠️ No authenticated user found, using default water goal');
+                } else {
+                    try {
+                        const onboardingData = await getOnboardingData(authUser.id);
+                        if (onboardingData?.waterIntakeOz) {
+                            console.log('💧 Loaded personalized water goal from onboarding:', onboardingData.waterIntakeOz, 'oz');
+                            setWaterGoal(onboardingData.waterIntakeOz);
+                        } else {
+                            console.log('⚠️ No onboarding water goal found, using default (128 oz)');
+                        }
+                    } catch (error) {
+                        console.warn('Could not load water goal from onboarding data:', error);
                     }
-                } catch (error) {
-                    console.warn('Could not load water goal from onboarding data:', error);
                 }
 
                 const todaysMeals = await mealService.getMealsForDate(todayDate);
