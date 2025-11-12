@@ -4,6 +4,15 @@
 Jonmurr.fit is an AI-powered fitness tracking application built with React, TypeScript, and Vite. Its core purpose is to provide personalized workout planning and meal suggestions using Google's Gemini AI. The project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve their health goals. The business vision is to provide a comprehensive, engaging, and personalized fitness solution that stands out in the market by leveraging AI for tailored guidance and gamification for sustained user engagement.
 
 ## Recent Changes (November 12, 2025)
+- **✅ AI-Powered Onboarding Plans (COMPLETED - Architect Approved)**: Complete AI integration generates personalized workout and meal plans during onboarding:
+  - **Parallel AI Generation**: Generates workout and meal plans concurrently using Promise.allSettled for 2x faster completion
+  - **Workout Plan Generation**: Uses Gemini AI to create personalized 4-week workout program based on user's goal, equipment access, focus areas, training frequency, injuries, and medical conditions
+  - **Meal Plan Generation**: Uses Gemini AI to create 7-day meal plan based on user's macro targets, dietary restrictions, eating preferences, and lifestyle
+  - **Automatic Activation**: Generated workout plan is saved and set as active immediately, ready to use on dashboard
+  - **Type-Safe Mapping**: 10 helper functions normalize onboarding data to AI preference formats with proper TypeScript string literals
+  - **Graceful Error Handling**: AI generation failures don't block onboarding completion; core data (macros, weight) always syncs
+  - **Smart UI Feedback**: Loading state shows "Generating Your Personalized Plans..." during AI generation
+  
 - **✅ Complete Dashboard Integration (COMPLETED - Architect Approved)**: Full end-to-end personalization from onboarding to dashboard:
   - **onboardingSyncService**: Orchestrates data sync from user_onboarding_data to all app services after onboarding completes
   - **Macro Targets Sync**: Syncs daily calories and macros (protein/carbs/fats) to macro_targets table with training day multipliers (10% more calories, 5% more protein, 15% more carbs)
