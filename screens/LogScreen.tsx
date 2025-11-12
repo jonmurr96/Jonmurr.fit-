@@ -449,6 +449,7 @@ const LogScreenComponent: React.FC<LogScreenProps> = (props) => {
             mealsToday={meals}
             onDeactivate={onDeactivateMealPlan}
             onEdit={() => setIsEditingMealPlan(true)}
+            onPlanUpdate={onUpdateActiveMealPlan}
           />
         )}
       </div>

@@ -26,6 +26,7 @@ The application features a modern, engaging design with a focus on gamification,
 ### Feature Specifications
 - **Daily Macro Tracking**: Users can log and track calories, protein, carbohydrates, and fats.
 - **AI-Powered Planning**: Generation of personalized workout routines and meal plans during onboarding with parallel AI generation using `Promise.allSettled`.
+- **Food Swap Catalog System**: Interactive meal plan customization with a curated catalog of 60 foods across protein/carbs/fats categories. Features include real-time food swapping with automatic macro recalculation, category-based filtering, search functionality, favorites management, and swap history tracking.
 - **Progress Visualization**: Charts, graphs, and heat maps to track fitness journey and achievements.
 - **Workout Management**: Users can save, organize by status (Active, Draft, Library), and set active workout plans.
 - **Health Checks**: An integrated health check system detects missing Supabase tables and guides users through schema application.
@@ -39,7 +40,8 @@ The application features a modern, engaging design with a focus on gamification,
 - **Modular Component Architecture**: UI is built with reusable components for maintainability.
 - **Auth Service Layer**: Dedicated service for all authentication and user profile operations with error typing.
 - **AuthContext Provider**: Manages session, token refresh, and profile loading.
-- **Database Service Architecture**: All 7 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement. All services are refactored to eliminate `this` bindings, capturing `userId` from the factory scope. A `useUserServices` hook provides authenticated, user-scoped database service instances.
+- **Database Service Architecture**: All 8 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement. All services are refactored to eliminate `this` bindings, capturing `userId` from the factory scope. A `useUserServices` hook provides authenticated, user-scoped database service instances.
+- **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.

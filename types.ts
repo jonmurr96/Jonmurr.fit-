@@ -261,6 +261,7 @@ export interface MealPlanItem {
     protein: number;
     carbs: number;
     fat: number;
+    catalogFoodId?: number;
 }
 
 export interface PlannedMeal {
