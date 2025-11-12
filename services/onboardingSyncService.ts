@@ -41,7 +41,10 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
     // 1. Fetch onboarding data
     const onboardingData = await getOnboardingData(userId);
     if (!onboardingData) {
-      return { ...result, error: 'No onboarding data found' };
+      console.error('❌ No onboarding data found for user:', userId);
+      console.error('⚠️  This usually means the database table "user_onboarding_data" is missing or empty.');
+      console.error('📝 Solution: Apply supabase/APPLY_ALL_MIGRATIONS.sql in your Supabase Dashboard.');
+      return { ...result, error: 'No onboarding data found. Please apply database migrations.' };
     }
 
     // 2. Initialize services

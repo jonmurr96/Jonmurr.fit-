@@ -58,6 +58,15 @@ export async function saveOnboardingData(
 
     if (upsertError) {
       console.error('Error saving onboarding data:', upsertError);
+      
+      // Check if table doesn't exist
+      if (upsertError.code === '42P01' || upsertError.message?.includes('relation') && upsertError.message?.includes('does not exist')) {
+        return { 
+          success: false, 
+          error: '⚠️ Database table missing! Please apply migrations in Supabase Dashboard. See supabase/APPLY_ALL_MIGRATIONS.sql'
+        };
+      }
+      
       return { success: false, error: upsertError.message };
     }
 
@@ -69,6 +78,15 @@ export async function saveOnboardingData(
 
     if (userUpdateError) {
       console.error('Error updating user onboarding status:', userUpdateError);
+      
+      // Check if table doesn't exist
+      if (userUpdateError.code === '42P01' || userUpdateError.message?.includes('relation') && userUpdateError.message?.includes('does not exist')) {
+        return { 
+          success: false, 
+          error: '⚠️ Database table missing! Please apply migrations in Supabase Dashboard. See supabase/APPLY_ALL_MIGRATIONS.sql'
+        };
+      }
+      
       return { success: false, error: userUpdateError.message };
     }
 
