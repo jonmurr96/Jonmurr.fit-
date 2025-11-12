@@ -253,6 +253,25 @@ export const generateWorkoutPlan = async (preferences: WorkoutPlanPreferences): 
 };
 
 export const generateMealPlan = async (preferences: NutritionPlanPreferences): Promise<GeneratedMealPlan | null> => {
+    // Only use CRITICAL targets if ALL macro fields are populated (prevents NaN/undefined in prompt)
+    const hasCompleteTargets = preferences.targetCalories && preferences.targetProtein && preferences.targetCarbs && preferences.targetFat;
+    
+    const macroTargetSection = hasCompleteTargets
+        ? `
+    **CRITICAL MACRO TARGETS (YOU MUST MATCH THESE EXACTLY):**
+    - Target Calories: ${preferences.targetCalories} kcal (acceptable range: ${Math.round(preferences.targetCalories * 0.97)}-${Math.round(preferences.targetCalories * 1.03)} kcal, ±3%)
+    - Target Protein: ${preferences.targetProtein}g (acceptable range: ${Math.round(preferences.targetProtein * 0.97)}-${Math.round(preferences.targetProtein * 1.03)}g, ±3%)
+    - Target Carbs: ${preferences.targetCarbs}g (acceptable range: ${Math.round(preferences.targetCarbs * 0.97)}-${Math.round(preferences.targetCarbs * 1.03)}g, ±3%)
+    - Target Fat: ${preferences.targetFat}g (acceptable range: ${Math.round(preferences.targetFat * 0.97)}-${Math.round(preferences.targetFat * 1.03)}g, ±3%)
+    
+    **IMPORTANT:** The dailyPlan.totalCalories, totalProtein, totalCarbs, and totalFat in your JSON response MUST fall within these acceptable ranges. Adjust food portions precisely to hit these targets.
+    `
+        : `
+    Generate:
+    1. Daily calorie target based on TDEE adjusted for goal pace.
+    2. Macro breakdown in grams for Protein, Carbs, and Fats.
+    `;
+
     const prompt = `
     Based on the following user profile:
     - Gender: ${preferences.gender}
@@ -272,10 +291,10 @@ export const generateMealPlan = async (preferences: NutritionPlanPreferences): P
     - Sleep: ${preferences.sleep}
     - Water intake: ${preferences.waterIntake}
 
+${macroTargetSection}
+
     Generate:
-    1. Daily calorie target based on TDEE adjusted for goal pace.
-    2. Macro breakdown in grams for Protein, Carbs, and Fats.
-    3. A full day’s meal plan template for a single day, matching the preferred number of meals.
+    3. A full day's meal plan template for a single day, matching the preferred number of meals.
     4. Each meal with specific food items and quantities, tailored to budget, cooking frequency, simplicity, and preferences.
     5. The plan should be modular and repeatable for a full week.
     6. Include optional swaps and substitutions for 1-2 items per meal based on restrictions/dislikes.
