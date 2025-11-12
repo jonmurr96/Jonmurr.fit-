@@ -154,6 +154,8 @@ export default function OnboardingScreen() {
     }
 
     try {
+      console.log('🚀 Starting onboarding confirmation...');
+      
       // Save onboarding data to Supabase
       const response = await saveOnboardingData(user.id, formData as OnboardingFormData);
       
@@ -162,25 +164,44 @@ export default function OnboardingScreen() {
         alert('Failed to save your data. Please try again.');
         return;
       }
+      console.log('✅ Onboarding data saved successfully');
 
-      // Sync onboarding data to app services (macros, weight, water goal)
+      // Sync onboarding data to app services (macros, weight, water goal, AI plans)
+      console.log('🔄 Syncing onboarding data and generating AI plans...');
       const syncResult = await syncOnboardingToApp(user.id);
       
+      console.log('📊 Sync result:', syncResult);
+      
       if (!syncResult.success) {
-        console.warn('Some onboarding data failed to sync:', syncResult.error);
-        console.warn('Sync status:', syncResult.synced);
+        console.error('❌ Some onboarding data failed to sync:', syncResult.error);
+        console.error('Sync status:', syncResult.synced);
+        
+        // Show detailed error to user
+        const failures = [];
+        if (!syncResult.synced.macros) failures.push('macro targets');
+        if (!syncResult.synced.weight) failures.push('weight log');
+        if (!syncResult.synced.workoutPlan) failures.push('workout plan');
+        if (!syncResult.synced.mealPlan) failures.push('meal plan');
+        
+        if (failures.length > 0) {
+          alert(`Warning: Failed to sync ${failures.join(', ')}. You can manually create these later.`);
+        }
       } else {
-        console.log('✅ Onboarding data synced successfully:', syncResult.synced);
+        console.log('✅ Onboarding data synced successfully!');
+        console.log('  - Macros:', syncResult.synced.macros ? '✅' : '❌');
+        console.log('  - Weight:', syncResult.synced.weight ? '✅' : '❌');
+        console.log('  - Workout Plan:', syncResult.synced.workoutPlan ? '✅' : '❌');
+        console.log('  - Meal Plan:', syncResult.synced.mealPlan ? '✅' : '❌');
       }
-
-      // TODO: Generate AI workout plan here
-      // const workoutPlan = await generateWorkoutPlan(formData);
       
       // Refresh user profile to pick up onboarding_complete flag
       // This will trigger AppWithAuth to automatically route to main app
+      console.log('🔄 Refreshing user profile...');
       await refreshUserProfile();
+      console.log('✅ Onboarding complete!');
     } catch (error) {
-      console.error('Error during onboarding confirmation:', error);
+      console.error('💥 Error during onboarding confirmation:', error);
+      console.error('Error details:', error);
       alert('Something went wrong. Please try again.');
     }
   };
