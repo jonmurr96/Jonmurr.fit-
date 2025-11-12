@@ -1,0 +1,97 @@
+This is a great feature idea that would massively boost personalization, user control, and satisfaction—especially for long-term adherence to the nutrition plan. Below is a revised and structured prompt you can copy/paste into AI Studio or Replit to implement this into your app using Supabase + an external or internal food catalog system:
+
+⸻
+
+📥 Prompt to Implement a Swappable Food Catalog System for the Meal Planner
+
+⸻
+
+Objective:
+Now that the Meal Planner widget is created and functional (and can generate meal plans from onboarding), I want to add a dynamic food catalog and swap system that allows users to substitute foods in their plan. This should be built in a modular, scalable way and integrate directly into the meal plan UI.
+
+⸻
+
+🔧 Functional Requirements:
+	1.	Food Catalog (Organized by Macronutrient):
+Build or connect to a database/API containing categorized foods, divided by primary macronutrient type:
+	•	Protein → chicken, ground turkey, salmon, tofu, eggs, cottage cheese, steak, protein powder, etc.
+	•	Carbohydrates → brown rice, oats, sweet potatoes, fruits, quinoa, bread, pasta, etc.
+	•	Fats → avocado, olive oil, nuts, seeds, nut butters, whole eggs, etc.
+Each food item should include:
+	•	Name
+	•	Macronutrient breakdown (protein, carbs, fat)
+	•	Calories
+	•	Serving size (e.g., 100g, 1 cup)
+	•	Optional: brand, allergens, tags (e.g., gluten-free, dairy-free)
+
+⸻
+
+	2.	Data Source Options (choose best strategy or combine):
+	•	Option A (Fast): Connect to an external food database API like:
+	•	USDA FoodData Central (free, comprehensive)
+	•	Edamam
+	•	Spoonacular
+	•	Nutritionix
+Sync relevant food items by macronutrient and store them in Supabase for quick access.
+	•	Option B (Custom): Build our own curated food catalog and store it in Supabase. Start with 50–100 commonly used foods per macro category, and scale later.
+
+⸻
+
+	3.	Swap Mechanism:
+	•	In the Meal Planner, allow users to tap on a meal (e.g., “Chicken + Rice”) → select a food item (e.g., chicken) → trigger “Swap Food” modal.
+	•	Show filtered list of macro-aligned alternatives (e.g., proteins).
+	•	Show visual macros side-by-side:
+
+Chicken Breast (100g): 165 kcal · 31g P · 3.6g F · 0g C  
+Ground Turkey (100g): 200 kcal · 28g P · 10g F · 0g C
+
+
+	•	When a swap is selected:
+	•	Auto-update the meal plan with new macros
+	•	Sync this change to the user’s log and quick add list
+	•	Optional: Store this preference for future plans
+
+⸻
+
+	4.	Integration with Logging + Quick Add:
+	•	If a user swaps a food → that new food should also appear in:
+	•	“Today’s Log”
+	•	“Quick Add” suggestions
+	•	“Favorites” if the user stars it
+
+⸻
+
+	5.	UI/UX Features:
+	•	“Suggested Swaps” button next to each food in the Meal Plan
+	•	Filters for dietary needs (vegan, low-fat, low-carb, dairy-free, gluten-free)
+	•	Option to Favorite or Blacklist certain foods
+	•	“View Macros” toggle on swap screen
+	•	Optional: Add image previews of foods (pull from API or static assets)
+
+⸻
+
+	6.	Backend Notes (Supabase):
+	•	Create a food_catalog table with:
+	•	id, name, category (protein/carbs/fats), calories, protein, carbs, fats, serving_size, tags, is_default, image_url
+	•	Add a user_preferences table to store:
+	•	user_id, favorited_food_ids, blacklisted_food_ids, recent_swaps
+
+⸻
+
+🧠 Long-Term Enhancements (Optional):
+	•	AI-based recommendations: Suggest food swaps based on past user behavior, taste preferences, or dietary restrictions.
+	•	Grocery list sync: Add swapped items directly to the grocery planner.
+	•	“Smart Substitutions” engine: Adjust serving size if new food doesn’t match macros 1-to-1.
+
+⸻
+
+✅ Final Outcome:
+	•	After onboarding generates the meal plan, the user can:
+	•	Tap on any food item
+	•	Swap it with another food from the same macro category
+	•	Update the meal plan and macros instantly
+	•	See that update reflected across the app (log, quick add, progress)
+
+⸻
+
+Let me know if you want a Supabase table schema, frontend swap modal example, or code to connect to a food API.
