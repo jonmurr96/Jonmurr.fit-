@@ -1,0 +1,40 @@
+It looks like the onboarding flow successfully captures user input, but none of the data (like weight, macros, workout plan, water intake, or nutrition preferences) is being synced or passed to the main app dashboard.
+
+Issue:
+The onboarding experience completes, but the resulting output (e.g. recommended macros, selected workout plan, meal plan, water goal, etc.) is not reflected in the main dashboard once the user finishes onboarding and is redirected to the app.
+
+⸻
+
+What needs to happen:
+	1.	Data Syncing Across App:
+Ensure that all generated output from onboarding is:
+	•	Saved properly in the user’s profile in Supabase
+	•	Pulled into the main dashboard and respective sections (Nutrition, Training, Water, Progress, etc.)
+	2.	Recommended Macros:
+	•	The macros generated during onboarding (based on user input and goal) should overwrite any default macro values in the app.
+	•	These should display on the dashboard and in the logging system.
+	3.	Workout Plan:
+	•	The AI-recommended plan from onboarding should be marked as the user’s active program.
+	•	It should load automatically under “Train” tab and appear in the home overview if applicable.
+	4.	Nutrition Plan / Meal Data:
+	•	Meal recommendations based on onboarding should populate the “Log” section or a “Meal Plan” section.
+	•	User should see these immediately without needing to set it up again.
+	5.	Water Intake:
+	•	Use onboarding inputs (weight, activity level) to calculate and save water goal.
+	•	Show this in the water tracker widget on the dashboard.
+	6.	Backend Sync:
+	•	Review Supabase logic to confirm that user onboarding data is stored correctly.
+	•	Ensure those stored values are fetched on first login after onboarding completes, and used to pre-fill all relevant areas of the UI.
+	7.	State Flag:
+	•	Add a check to determine if a user has completed onboarding and their data has been synced. Avoid showing default content if onboarding-generated data exists.
+
+⸻
+
+Expected Outcome:
+
+Once onboarding is completed, the app should feel fully pre-personalized. The dashboard should reflect the user’s exact:
+	•	Caloric & macro goals
+	•	Current/target weight
+	•	Active workout plan
+	•	Daily water intake
+	•	Recommended meal plan

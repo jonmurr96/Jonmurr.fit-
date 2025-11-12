@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { OnboardingFormData, OnboardingStep } from '../../types/onboarding';
 import { calculateOnboardingResults, calculateAge } from '../../utils/onboardingCalculations';
 import { saveOnboardingData } from '../../services/onboardingService';
+import { syncOnboardingToApp } from '../../services/onboardingSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import ProgressIndicator from '../../components/onboarding/ProgressIndicator';
 import StepNavigation from '../../components/onboarding/StepNavigation';
@@ -160,6 +161,16 @@ export default function OnboardingScreen() {
         console.error('Failed to save onboarding data:', response.error);
         alert('Failed to save your data. Please try again.');
         return;
+      }
+
+      // Sync onboarding data to app services (macros, weight, water goal)
+      const syncResult = await syncOnboardingToApp(user.id);
+      
+      if (!syncResult.success) {
+        console.warn('Some onboarding data failed to sync:', syncResult.error);
+        console.warn('Sync status:', syncResult.synced);
+      } else {
+        console.log('✅ Onboarding data synced successfully:', syncResult.synced);
       }
 
       // TODO: Generate AI workout plan here
