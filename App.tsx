@@ -8,6 +8,7 @@ import { useGamification } from './hooks/useGamification';
 import { GamificationFeedback } from './components/gamification/GamificationFeedback';
 import { checkDatabaseHealth } from './services/database/healthCheck';
 import SetupModal from './components/SetupModal';
+import { getOnboardingData } from './services/onboardingService';
 
 
 // Lazy load screen components for better performance
@@ -191,11 +192,27 @@ const App: React.FC = () => {
                     await userService.updateProfile(MOCK_USER);
                 }
 
+                // Load macro targets from Supabase (synced during onboarding)
                 const targets = await userService.getMacroTargets();
                 if (targets) {
+                    console.log('📊 Loaded personalized macro targets from database:', targets);
                     setMacroTargets(targets);
                 } else {
+                    console.log('⚠️ No macro targets found, using defaults');
                     await userService.updateMacroTargets(INITIAL_MOCK_TARGETS);
+                }
+
+                // Load water goal from onboarding data if available
+                try {
+                    const onboardingData = await getOnboardingData('default_user'); // TODO: Use actual userId from auth
+                    if (onboardingData?.waterIntakeOz) {
+                        console.log('💧 Loaded personalized water goal from onboarding:', onboardingData.waterIntakeOz, 'oz');
+                        setWaterGoal(onboardingData.waterIntakeOz);
+                    } else {
+                        console.log('⚠️ No onboarding water goal found, using default (128 oz)');
+                    }
+                } catch (error) {
+                    console.warn('Could not load water goal from onboarding data:', error);
                 }
 
                 const todaysMeals = await mealService.getMealsForDate(todayDate);
