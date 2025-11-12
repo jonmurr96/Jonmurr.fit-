@@ -4,16 +4,18 @@
 Jonmurr.fit is an AI-powered fitness tracking application built with React, TypeScript, and Vite. Its core purpose is to provide personalized workout planning and meal suggestions using Google's Gemini AI. The project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve their health goals. The business vision is to provide a comprehensive, engaging, and personalized fitness solution that stands out in the market by leveraging AI for tailored guidance and gamification for sustained user engagement.
 
 ## Recent Changes (November 12, 2025)
-- **🔄 Onboarding Data Sync System (IN PROGRESS)**: Built comprehensive integration to sync onboarding data into main app:
+- **✅ Complete Dashboard Integration (COMPLETED - Architect Approved)**: Full end-to-end personalization from onboarding to dashboard:
   - **onboardingSyncService**: Orchestrates data sync from user_onboarding_data to all app services after onboarding completes
   - **Macro Targets Sync**: Syncs daily calories and macros (protein/carbs/fats) to macro_targets table with training day multipliers (10% more calories, 5% more protein, 15% more carbs)
   - **Weight Tracking**: Logs initial weight to weight_logs with duplicate protection (only logs if no existing entries)
   - **Fitness Goal**: Updates user's main goal in users table
   - **useOnboardingData Hook**: React hook for dashboard components to fetch personalized data from onboarding
-  - **PersonalizedGoalsCard Component**: Dashboard widget displaying user's personalized goals, macros, water intake, and weight targets
+  - **PersonalizedGoalsCard Component**: Dashboard widget displaying user's personalized goals, macros, water intake, and weight targets (added to HomeScreen)
   - **OnboardingScreen Integration**: Automatically triggers sync after user confirms onboarding questionnaire
-  - **Enhanced Logging**: Detailed console logs for debugging sync process
-  - **⚠️ REMAINING WORK**: Dashboard still uses legacy in-memory state for macro wheel and water tracker - needs wiring to pull from Supabase synced data. Water goal needs user_preferences table or alternative storage solution.
+  - **App.tsx Integration**: Loads macro targets from Supabase macro_targets table and water goal from user_onboarding_data on startup
+  - **Authentication Fix**: App.tsx now uses `useAuth()` hook to get real authenticated user ID for all data fetching (no more hardcoded 'default_user')
+  - **Data Flow**: Onboarding → Sync → Dashboard displays personalized macros in macro wheel, water tracker, and PersonalizedGoalsCard
+  - **Enhanced Logging**: Detailed console logs showing when personalized data is loaded vs defaults used
   
 ## Recent Changes (November 11, 2025)
 - **✅ Smart Onboarding System (COMPLETED - Architect Approved)**: Comprehensive 5-step personalized onboarding flow for new users:
