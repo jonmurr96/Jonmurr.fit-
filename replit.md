@@ -13,7 +13,7 @@ The application features a modern, engaging design with a focus on gamification,
 
 ### Technical Implementations
 - **Frontend**: React 19.2.0 with TypeScript, built using Vite 6.2.0.
-- **AI Integration**: Google Gemini API for workout and meal plan generation, optimized for single API calls.
+- **AI Integration**: Google Gemini API for workout and meal plan generation, optimized for single API calls. Uses gemini-2.5-pro for workout plans (quality) and gemini-2.5-flash for meal plans (speed). Meal plan generation uses exact macro targets from onboarding calculations to ensure AI-generated meals align with user's daily goals.
 - **Styling**: Tailwind CSS for rapid and consistent styling.
 - **Charts**: Recharts library for data visualization.
 - **Database**: Supabase for backend, managing user data, workout logs, meal entries, and gamification state across 23 tables, including a `daily_activity_summary` table for heat map tracking.
@@ -21,7 +21,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Workout Status System**: Implements 'active', 'inactive', 'draft' statuses for workouts, enforcing a single active plan rule, and smart UI organization.
 - **Gamification System**: Features tiered badge progression across 8 categories (Bronze, Silver, Gold, Diamond tiers) with XP rewards, a 100-level system with exponential XP curve, a loot/rewards system with mystery chests, and a challenge system (weekly, monthly, recovery). XP is triggered by workouts, meals, water tracking, and AI usage.
 - **Heat Map System**: Daily activity tracking with a 6-tier color-coding system (Gray, Red, Orange, Green, Diamond, Blue) visualized in MiniHeatMap (14-day strip) and FullHeatMap (monthly calendar) components, with a DayDetailModal for comprehensive daily activity breakdown.
-- **Onboarding System**: Comprehensive 5-step personalized onboarding flow (PersonalInfo, FitnessGoals, BodyType, WorkoutPreferences, DietLifestyle, Smart Summary) with scientific calculations (BMR, TDEE, macros, water intake) and database integration for storing responses.
+- **Onboarding System**: Comprehensive 5-step personalized onboarding flow (PersonalInfo, FitnessGoals, BodyType, WorkoutPreferences, DietLifestyle, Smart Summary) with scientific calculations (BMR, TDEE, macros, water intake) and database integration for storing responses. Calculated macro targets are passed to AI meal plan generation to ensure generated meal plans exactly match user's daily calorie and macro goals (±3% tolerance).
 
 ### Feature Specifications
 - **Daily Macro Tracking**: Users can log and track calories, protein, carbohydrates, and fats.
