@@ -179,8 +179,8 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
         const generatedMealPlan = await generateMealPlan(mealPreferences);
         
         if (generatedMealPlan) {
-          await mealPlanService.saveMealPlan(generatedMealPlan, false); // Save meal plan (not active by default)
-          console.log('✅ Meal plan generated:', generatedMealPlan.planName);
+          await mealPlanService.saveMealPlan(generatedMealPlan, true); // Save meal plan as active (matches workout flow)
+          console.log('✅ Meal plan generated and set as active:', generatedMealPlan.planName);
           return true;
         }
         return false;
