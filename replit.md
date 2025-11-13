@@ -44,7 +44,18 @@ The application features a modern, engaging design with a focus on gamification,
 - **Database Service Architecture**: All 8 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement. All services are refactored to eliminate `this` bindings, capturing `userId` from the factory scope. A `useUserServices` hook provides authenticated, user-scoped database service instances.
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
+## Recent Changes
+### November 13, 2025 - USDA Food Database Integration
+- **USDA FoodData Central API**: Integrated free USDA API (1,000 requests/hour) for real-time food search with 1000+ foods
+- **Enhanced Food Search**: ManualMealPlanBuilder and FoodSwapModal now search USDA database when users type (300ms debounce)
+- **Quick Picks + USDA**: 60-food catalog serves as curated quick picks; USDA search activates on typing
+- **Type-Safe Conversions**: Added convertSimplifiedToFoodItem() to ensure USDA foods work properly in swap system
+- **Training Day Macros**: Fixed onboarding to generate meal plans with training day macros (+10% calories, +5% protein, +15% carbs)
+- **UI Enhancements**: Added USDA badges, loading spinners, and contextual help text for food search
+- **Backward Compatibility**: Maintained full compatibility with existing 60-food catalog system
+
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.
 - **Supabase**: Backend-as-a-service for database management, authentication, and real-time features.
 - **WGER API**: Provides access to a comprehensive exercise database.
+- **USDA FoodData Central API**: Free nutrition database with 1000+ foods for meal planning and food swapping.
