@@ -3,14 +3,14 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { AiMessage, FoodItem, TrainingProgram, Exercise, WorkoutPlanPreferences, SavedWorkout, ProgressionSuggestion, ProgressionPreference, Workout, NutritionPlanPreferences, GeneratedMealPlan } from "../types";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const WGER_API_KEY = process.env.WGER_API_KEY || '';
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+const WGER_API_KEY = import.meta.env.VITE_WGER_API_KEY || '';
 
 if (!GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY environment variable not set. Please add it to your Replit Secrets.");
+  console.error("⚠️ GEMINI_API_KEY not found - AI features will not work");
 }
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 const foodItemSchema = {
   type: Type.OBJECT,
@@ -39,6 +39,10 @@ const fileToGenerativePart = async (file: File) => {
 
 export const logFoodWithNLP = async (text: string): Promise<FoodItem[]> => {
   try {
+    if (!ai) {
+      console.error('❌ Gemini API key not configured - logFoodWithNLP unavailable');
+      return [];
+    }
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `You are an expert nutritionist with access to the USDA FoodData Central database. Analyze the following text and extract a list of all food items mentioned. For each item, provide its name, quantity, unit, and its nutritional information (calories, protein, carbs, fat) based on the USDA data. Ensure you return values for protein, carbs, and fat, even if they are 0. Your response must be in JSON format that adheres to the provided schema. Text: "${text}"`,
@@ -62,6 +66,10 @@ export const logFoodWithNLP = async (text: string): Promise<FoodItem[]> => {
 
 export const logFoodWithPhoto = async (imageFile: File): Promise<FoodItem[]> => {
   try {
+    if (!ai) {
+      console.error('❌ Gemini API key not configured - logFoodWithPhoto unavailable');
+      return [];
+    }
     const imagePart = await fileToGenerativePart(imageFile);
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -102,6 +110,10 @@ export const generateWorkoutPlan = async (preferences: WorkoutPlanPreferences): 
     console.log('🏋️ generateWorkoutPlan called with preferences:', JSON.stringify(preferences, null, 2));
     
     try {
+        if (!ai) {
+            console.error('❌ Gemini API key not configured - generateWorkoutPlan unavailable');
+            return null;
+        }
         console.log('📡 Calling Gemini API for workout plan generation...');
         const prompt = `
         You are a world-class certified strength and conditioning specialist (CSCS) and personal trainer AI. Your task is to generate a highly customized, structured, and progressive 4-week training program based on the user's detailed screening inputs.
@@ -368,6 +380,10 @@ ${macroTargetSection}
     };
 
     try {
+        if (!ai) {
+            console.error('❌ Gemini API key not configured - generateMealPlan unavailable');
+            return null;
+        }
         // Use flash model for faster meal plan generation (3-5x faster than pro)
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -536,6 +552,10 @@ export const processWorkoutCommand = async (transcript: string, currentExercises
     - If the command is ambiguous, do not call any function.`;
 
     try {
+        if (!ai) {
+            console.error('❌ Gemini API key not configured - processWorkoutCommand unavailable');
+            return null;
+        }
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -583,6 +603,10 @@ Follow these rules STRICTLY:
 Your response MUST be a JSON object that adheres to the provided schema. Only return a suggestion if a clear progression is warranted.`;
 
     try {
+        if (!ai) {
+            console.error('❌ Gemini API key not configured - getProgressionSuggestions unavailable');
+            return [];
+        }
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -645,6 +669,10 @@ export const getPostWorkoutRecap = async (workout: Workout): Promise<string> => 
     }
 
     try {
+        if (!ai) {
+            console.error('❌ Gemini API key not configured - getPostWorkoutRecap unavailable');
+            return "Great work today! Consistency is key.";
+        }
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -673,6 +701,10 @@ ${promptHistory}
 Coach:`;
 
     try {
+        if (!ai) {
+            console.error('❌ Gemini API key not configured - getAICoachResponse unavailable');
+            return "I'm sorry, I'm having trouble connecting right now. Please try again later.";
+        }
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -732,6 +764,10 @@ ${text}
 
 Your response MUST be valid JSON adhering to the provided schema.`;
 
+    if (!ai) {
+      console.error('❌ Gemini API key not configured - parseWorkoutText unavailable');
+      return null;
+    }
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -820,6 +856,10 @@ Analyze for:
 
 Provide 2-3 short, actionable suggestions. Be encouraging but honest. Keep it under 100 words.`;
 
+    if (!ai) {
+      console.error('❌ Gemini API key not configured - reviewImportedWorkout unavailable');
+      return "Great job importing your workout! Make sure to balance push and pull exercises, and don't forget leg day!";
+    }
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -863,6 +903,10 @@ Provide 2-3 short, actionable suggestions in feedback. Be encouraging but honest
 
 Your response MUST be valid JSON adhering to the provided schema.`;
 
+    if (!ai) {
+      console.error('❌ Gemini API key not configured - parseAndReviewWorkout unavailable');
+      return null;
+    }
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
