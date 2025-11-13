@@ -60,7 +60,117 @@ export interface SimplifiedFood {
 }
 
 /**
- * Search for foods in USDA database
+ * Calculate relevance score for search result
+ * Higher score = more relevant
+ */
+function calculateRelevanceScore(description: string, query: string): number {
+  const descLower = description.toLowerCase();
+  const queryLower = query.toLowerCase();
+  const queryTerms = queryLower.split(/\s+/);
+  
+  let score = 0;
+  
+  // Exact match = highest score
+  if (descLower === queryLower) {
+    score += 100;
+  }
+  
+  // Starts with query = very high score
+  if (descLower.startsWith(queryLower)) {
+    score += 50;
+  }
+  
+  // Contains exact query = high score
+  if (descLower.includes(queryLower)) {
+    score += 25;
+  }
+  
+  // Contains all query terms = moderate score
+  const allTermsFound = queryTerms.every(term => descLower.includes(term));
+  if (allTermsFound) {
+    score += 15;
+  }
+  
+  // Count matching terms
+  const matchingTerms = queryTerms.filter(term => descLower.includes(term)).length;
+  score += matchingTerms * 5;
+  
+  // Penalty for very long descriptions (likely too specific)
+  if (description.length > 100) {
+    score -= 10;
+  }
+  
+  // Bonus for shorter, simpler descriptions
+  if (description.length < 30) {
+    score += 5;
+  }
+  
+  return score;
+}
+
+/**
+ * Filter out irrelevant foods (snacks, processed foods when searching whole foods)
+ */
+function isRelevantFood(description: string, query: string): boolean {
+  const descLower = description.toLowerCase();
+  const queryLower = query.toLowerCase();
+  
+  // Irrelevant patterns to filter out
+  const irrelevantPatterns = [
+    /^snacks?,/i,           // "Snacks, rice cakes..."
+    /^candies,/i,           // "Candies, chocolate..."
+    /\(baby food\)/i,       // Baby food items
+    /\(infant formula\)/i,  // Infant formula
+    /\(alcoholic\)/i,       // Alcoholic beverages
+  ];
+  
+  // Whole food keywords - check if ANY word in query matches
+  const wholeFoodKeywords = [
+    'rice', 'chicken', 'beef', 'fish', 'turkey', 'pork', 'salmon', 'tuna', 'egg',
+    'apple', 'banana', 'oat', 'quinoa', 'potato', 'broccoli', 'spinach', 'carrot',
+    'avocado', 'almond', 'walnut', 'olive', 'cheese', 'milk', 'yogurt', 'tofu',
+    'lentil', 'bean', 'pea', 'corn', 'wheat', 'barley', 'bread', 'pasta', 'orange',
+    'strawberry', 'blueberry', 'grape', 'peach', 'pear', 'melon', 'cucumber', 'tomato'
+  ];
+  
+  // Check if any word in the query matches a whole food keyword
+  const queryWords = queryLower.split(/\s+/);
+  const isWholeFoodQuery = queryWords.some(word => wholeFoodKeywords.includes(word));
+  
+  if (isWholeFoodQuery) {
+    // Filter out snacks and highly processed foods
+    for (const pattern of irrelevantPatterns) {
+      if (pattern.test(description)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Remove duplicate/very similar results
+ */
+function deduplicateResults(results: USDASearchResult[]): USDASearchResult[] {
+  const seen = new Set<string>();
+  const unique: USDASearchResult[] = [];
+  
+  for (const food of results) {
+    // Create a normalized key for comparison
+    const key = food.description.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(food);
+    }
+  }
+  
+  return unique;
+}
+
+/**
+ * Search for foods in USDA database with improved relevance
  * @param query - Search term (e.g., "chicken breast", "apple")
  * @param pageSize - Number of results (max 200, default 25)
  */
@@ -75,7 +185,9 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
   }
 
   try {
-    const url = `${BASE_URL}/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=${pageSize}&dataType=Foundation,SR%20Legacy`;
+    // Increase page size to get more results for filtering
+    const fetchSize = Math.min(pageSize * 3, 200);
+    const url = `${BASE_URL}/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=${fetchSize}&dataType=Foundation,SR%20Legacy`;
     
     const response = await fetch(url);
     
@@ -90,8 +202,8 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
       return [];
     }
 
-    // Map results with basic nutrition info
-    return data.foods.map((food: any) => ({
+    // Map results with basic nutrition info and relevance score
+    const results = data.foods.map((food: any) => ({
       fdcId: food.fdcId,
       description: food.description,
       dataType: food.dataType,
@@ -100,7 +212,30 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
       protein: extractNutrient(food.foodNutrients, 1003), // Protein
       carbs: extractNutrient(food.foodNutrients, 1005), // Carbs
       fat: extractNutrient(food.foodNutrients, 1004), // Total lipid (fat)
+      _relevanceScore: calculateRelevanceScore(food.description, query),
     }));
+
+    // Filter out irrelevant foods
+    const filtered = results.filter((food: any) => isRelevantFood(food.description, query));
+    
+    // Sort by relevance score (highest first)
+    const sorted = filtered.sort((a: any, b: any) => b._relevanceScore - a._relevanceScore);
+    
+    // Deduplicate similar results
+    const deduplicated = deduplicateResults(sorted);
+    
+    // Limit to requested page size
+    const limited = deduplicated.slice(0, pageSize);
+    
+    console.log('🔍 USDA search:', {
+      query,
+      totalResults: data.foods.length,
+      afterFiltering: filtered.length,
+      afterDedup: deduplicated.length,
+      returned: limited.length,
+    });
+    
+    return limited;
   } catch (error) {
     console.error('Error searching USDA foods:', error);
     return [];

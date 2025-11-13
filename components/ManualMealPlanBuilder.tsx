@@ -196,24 +196,24 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-zinc-900 text-white rounded-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col border border-zinc-800 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 sm:px-0">
+      <div className="bg-zinc-900 text-white rounded-2xl p-4 sm:p-6 w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col border border-zinc-800 shadow-2xl">
         
         {/* Header */}
-        <div className="p-6 border-b border-zinc-800">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex-1">
+        <div className="pb-4 sm:pb-6 border-b border-zinc-800 space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="flex-1 min-w-0 mr-4">
               <input
                 type="text"
                 value={planName}
                 onChange={(e) => setPlanName(e.target.value)}
-                className="text-2xl font-bold bg-transparent border-b border-zinc-700 focus:border-green-500 outline-none transition-colors"
+                className="text-xl sm:text-2xl font-bold bg-transparent border-b border-zinc-700 focus:border-green-500 outline-none transition-colors w-full"
                 placeholder="Enter plan name"
               />
             </div>
             <button
               onClick={onClose}
-              className="text-zinc-400 hover:text-white transition-colors ml-4"
+              className="text-zinc-400 hover:text-white transition-colors flex-shrink-0"
               aria-label="Close"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +223,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
           </div>
 
           {/* Macro Summary */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-zinc-800 rounded-lg p-3">
               <p className="text-xs text-zinc-400">Calories</p>
               <p className="text-2xl font-bold text-white">{Math.round(macros.totalCalories)}</p>
@@ -243,19 +243,19 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
           </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
           {/* Food Catalog Browser */}
-          <div className="w-1/2 border-r border-zinc-800 flex flex-col">
-            <div className="p-4 border-b border-zinc-800">
-              <h3 className="text-lg font-bold mb-3">Food Catalog</h3>
+          <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-zinc-800 flex flex-col min-h-0">
+            <div className="p-3 sm:p-4 border-b border-zinc-800">
+              <h3 className="text-base sm:text-lg font-bold mb-3">Food Catalog</h3>
               
               {/* Category Tabs */}
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {(['protein', 'carbs', 'fats'] as const).map(cat => (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                       activeCategory === cat
                         ? `${getCategoryColor(cat)} text-white`
                         : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
@@ -318,15 +318,15 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                     key={`${isUSDA ? 'usda' : 'cat'}-${food.id}`}
                     className="bg-zinc-800 rounded-lg p-3 hover:bg-zinc-750 transition-colors"
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-white">{food.name}</p>
-                        {isFavorite && <span className="text-yellow-400 text-sm">⭐</span>}
-                        {isUSDA && <span className="text-xs bg-blue-600 px-2 py-0.5 rounded text-white">USDA</span>}
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-3 mb-2 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <p className="font-bold text-white break-words">{food.name}</p>
+                        {isFavorite && <span className="text-yellow-400 text-sm flex-shrink-0">⭐</span>}
+                        {isUSDA && <span className="text-xs bg-blue-600 px-2 py-0.5 rounded text-white flex-shrink-0">USDA</span>}
                       </div>
-                      <div className="text-right">
+                      <div className="space-y-1 text-left sm:text-right flex-shrink-0">
                         <p className="text-sm font-semibold text-white">{Math.round(food.calories)} kcal</p>
-                        <p className="text-xs text-zinc-400">
+                        <p className="text-xs text-zinc-400 break-words">
                           P: {Math.round(protein)}g · C: {Math.round(carbs)}g · F: {Math.round(fat)}g
                         </p>
                       </div>
@@ -361,7 +361,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
           </div>
 
           {/* Meal Builder */}
-          <div className="w-1/2 flex flex-col">
+          <div className="w-full lg:w-1/2 flex flex-col min-h-0">
             <div className="p-4 border-b border-zinc-800">
               <h3 className="text-lg font-bold">Your Meal Plan</h3>
               <p className="text-sm text-zinc-400">{totalItems} items added</p>

@@ -99,7 +99,10 @@ Your response must be in JSON format that adheres to the provided schema. Ensure
 };
 
 export const generateWorkoutPlan = async (preferences: WorkoutPlanPreferences): Promise<TrainingProgram | null> => {
+    console.log('🏋️ generateWorkoutPlan called with preferences:', JSON.stringify(preferences, null, 2));
+    
     try {
+        console.log('📡 Calling Gemini API for workout plan generation...');
         const prompt = `
         You are a world-class certified strength and conditioning specialist (CSCS) and personal trainer AI. Your task is to generate a highly customized, structured, and progressive 4-week training program based on the user's detailed screening inputs.
 
@@ -242,12 +245,24 @@ export const generateWorkoutPlan = async (preferences: WorkoutPlanPreferences): 
                 }
             }
         });
+        
+        console.log('✅ Gemini API responded successfully');
         const jsonStr = response.text.trim();
+        console.log('📝 Response text length:', jsonStr.length, 'chars');
+        
         const plan = JSON.parse(jsonStr) as TrainingProgram;
+        console.log('✅ Parsed workout plan:', plan.programName);
+        
         plan.preferences = preferences; // Attach preferences to the generated plan
         return plan;
-    } catch (error) {
-        console.error("Error generating workout plan:", error);
+    } catch (error: any) {
+        console.error("❌ Error generating workout plan:");
+        console.error("Error name:", error?.name);
+        console.error("Error message:", error?.message);
+        console.error("Error stack:", error?.stack);
+        if (error?.response) {
+            console.error("API Response error:", JSON.stringify(error.response, null, 2));
+        }
         return null;
     }
 };

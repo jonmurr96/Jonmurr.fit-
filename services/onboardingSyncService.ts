@@ -128,6 +128,8 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
     const [workoutResult, mealResult] = await Promise.allSettled([
       // Workout Plan Generation
       (async () => {
+        console.log('🚀 Starting workout plan generation...');
+        
         const workoutPreferences: WorkoutPlanPreferences = {
           goal: mapGoalToWorkoutGoal(onboardingData.mainGoal),
           experienceLevel: 'Beginner',
@@ -143,14 +145,20 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
           medicalConditions: (onboardingData.medicalConditions || []) as ('Asthma' | 'High Blood Pressure' | 'Diabetes' | 'None')[],
         };
 
+        console.log('📋 Workout preferences prepared:', JSON.stringify(workoutPreferences, null, 2));
+        console.log('⏳ Calling generateWorkoutPlan...');
+        
         const generatedProgram = await generateWorkoutPlan(workoutPreferences);
         
         if (generatedProgram) {
+          console.log('💾 Saving workout plan to database...');
           await workoutService.saveProgram(generatedProgram, true); // Save and set as active
           console.log('✅ Workout plan generated and set as active:', generatedProgram.programName);
           return true;
+        } else {
+          console.error('❌ generateWorkoutPlan returned null - check Gemini API errors above');
+          return false;
         }
-        return false;
       })(),
       
       // Meal Plan Generation
@@ -207,10 +215,17 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
     ]);
 
     // Update sync results based on parallel generation outcomes
-    if (workoutResult.status === 'fulfilled' && workoutResult.value) {
-      result.synced.workoutPlan = true;
+    console.log('📊 Workout generation result status:', workoutResult.status);
+    if (workoutResult.status === 'fulfilled') {
+      console.log('✅ Workout promise fulfilled. Value:', workoutResult.value);
+      if (workoutResult.value) {
+        result.synced.workoutPlan = true;
+      } else {
+        console.error('⚠️ Workout generation completed but returned false (null plan)');
+      }
     } else if (workoutResult.status === 'rejected') {
-      console.error('❌ Error generating workout plan:', workoutResult.reason);
+      console.error('❌ Workout generation promise rejected:', workoutResult.reason);
+      console.error('Full error:', JSON.stringify(workoutResult.reason, null, 2));
     }
 
     if (mealResult.status === 'fulfilled' && mealResult.value) {

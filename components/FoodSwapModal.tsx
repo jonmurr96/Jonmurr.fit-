@@ -133,10 +133,10 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-zinc-900 text-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-zinc-800 shadow-2xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Swap Food</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 sm:px-0">
+      <div className="bg-zinc-900 text-white rounded-2xl p-4 sm:p-6 w-full max-w-lg sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-zinc-800 shadow-2xl space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl sm:text-2xl font-bold">Swap Food</h2>
           <button
             onClick={onClose}
             className="text-zinc-400 hover:text-white transition-colors"
@@ -148,21 +148,21 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
           </button>
         </div>
 
-        <div className={`${getCategoryColor(category)} text-white px-3 py-1 rounded-full text-sm font-semibold inline-flex items-center gap-1 w-fit mb-4`}>
+        <div className={`${getCategoryColor(category)} text-white px-3 py-1 rounded-full text-sm font-semibold inline-flex items-center gap-1 w-fit`}>
           {getCategoryName(category)} Sources
         </div>
 
-        <div className="bg-zinc-800 rounded-lg p-4 mb-4">
+        <div className="bg-zinc-800 rounded-lg p-3 sm:p-4 min-w-0">
           <p className="text-xs text-zinc-400 mb-2">Current Food</p>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="font-bold text-white">{currentFood.food}</p>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 min-w-0">
+            <div className="min-w-0">
+              <p className="font-bold text-white break-words">{currentFood.food}</p>
               <p className="text-sm text-zinc-400">{currentFood.quantity}</p>
             </div>
-            <div className="text-right">
+            <div className="space-y-1 sm:space-y-2 text-left sm:text-right">
               <p className="text-xs text-zinc-400">Macros</p>
               <p className="text-sm text-white">{Math.round(currentFood.calories)} kcal</p>
-              <p className="text-xs text-zinc-400">P: {currentFood.protein}g · C: {currentFood.carbs}g · F: {currentFood.fat}g</p>
+              <p className="text-xs text-zinc-400 break-words">P: {currentFood.protein}g · C: {currentFood.carbs}g · F: {currentFood.fat}g</p>
             </div>
           </div>
         </div>
@@ -172,20 +172,20 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
           placeholder="Search USDA database (1000+ foods)..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 mb-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
         />
 
         {!showQuickPicks && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-blue-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-2 text-xs text-blue-400">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Searching USDA database - all nutrition values per 100g</span>
+            <span className="break-words">Searching USDA database - all nutrition values per 100g</span>
           </div>
         )}
 
         {showQuickPicks && allTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2">
             {allTags.slice(0, 12).map(tag => (
               <button
                 key={tag}
@@ -234,18 +234,18 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
                     setSelectedFood(food as FoodItem);
                   }
                 }}
-                className={`bg-zinc-800 rounded-lg p-4 cursor-pointer transition-all ${
+                className={`bg-zinc-800 rounded-lg p-3 sm:p-4 cursor-pointer transition-all ${
                   isSelected ? 'ring-2 ring-green-500 bg-zinc-750' : 'hover:bg-zinc-750'
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-bold text-white">{food.name}</p>
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3 min-w-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <p className="font-bold text-white break-words">{food.name}</p>
                       {isFavorite && (
                         <span className="text-yellow-400">⭐</span>
                       )}
-                      {isUSDA && <span className="text-xs bg-blue-600 px-2 py-0.5 rounded text-white">USDA</span>}
+                      {isUSDA && <span className="text-xs bg-blue-600 px-2 py-0.5 rounded text-white flex-shrink-0">USDA</span>}
                     </div>
                     <p className="text-sm text-zinc-400">{servingSize}{servingUnit}</p>
                     {tags && tags.length > 0 && (
@@ -258,9 +258,9 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="text-right ml-4">
+                  <div className="space-y-1 sm:space-y-2 text-left sm:text-right flex-shrink-0">
                     <p className="text-sm font-semibold text-white">{Math.round(food.calories)} kcal</p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-zinc-400 break-words">
                       P: {Math.round(protein)}g · C: {Math.round(carbs)}g · F: {Math.round(fat)}g
                     </p>
                     {onToggleFavorite && !isUSDA && (
@@ -290,17 +290,17 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
         </div>
 
         {selectedFood && (
-          <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 mb-4">
+          <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-3 sm:p-4 min-w-0">
             <p className="text-xs text-green-200 mb-2">Swapping To</p>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-bold text-white">{selectedFood.name}</p>
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-3 min-w-0">
+              <div className="min-w-0">
+                <p className="font-bold text-white break-words">{selectedFood.name}</p>
                 <p className="text-sm text-green-200">{selectedFood.serving_size}{selectedFood.serving_unit}</p>
               </div>
-              <div className="text-right">
+              <div className="space-y-1 sm:space-y-2 text-left sm:text-right">
                 <p className="text-xs text-green-200">New Macros</p>
                 <p className="text-sm text-white">{Math.round(selectedFood.calories)} kcal</p>
-                <p className="text-xs text-green-200">
+                <p className="text-xs text-green-200 break-words">
                   P: {selectedFood.protein_g}g · C: {selectedFood.carbs_g}g · F: {selectedFood.fat_g}g
                 </p>
               </div>
@@ -308,7 +308,7 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={onClose}
             className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
