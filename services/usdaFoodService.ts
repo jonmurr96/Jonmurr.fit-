@@ -60,105 +60,183 @@ export interface SimplifiedFood {
 }
 
 /**
- * Calculate relevance score for search result
- * Higher score = more relevant
+ * Hard ban keywords - results containing these are blocked entirely
  */
-function calculateRelevanceScore(description: string, query: string): number {
+const HARD_BAN_KEYWORDS = [
+  'babyfood', 'baby food', 'infant', 'toddler', 'formula',
+  'snack', 'cracker', 'chip', 'candy', 'dessert', 'pastry', 'cookie', 'brownie', 'muffin', 'cake', 'pie',
+  'flour', 'starch', 'mix', 'batter', 'breaded', 'coating', 'breading',
+  'soup', 'broth', 'gravy', 'sauce', 'dressing', 'marinade', 'syrup',
+  'supplement', 'beverage', 'cocktail', 'smoothie', 'powder', 'shake', 'shake mix', 'pudding',
+  'pickled', 'preserved', 'dehydrated', 'sweetened',
+  'microwave', 'entree', 'meal', 'kit',
+  'cereal', 'tortilla', 'wrap', 'pasta', 'noodle', 'ramen', 'pizza', 'waffle', 'pancake', 'biscuit'
+];
+
+/**
+ * Soft penalty keywords - subtracts points but doesn't block
+ */
+const SOFT_PENALTY_KEYWORDS = [
+  'frozen', 'canned', 'seasoned', 'flavored', 'instant', 'prepared', 'ready-to-serve', 'reduced sodium', 'packaged'
+];
+
+/**
+ * Processed adjectives that reduce canonicality score
+ */
+const PROCESSED_ADJECTIVES = [
+  'smoked', 'breaded', 'seasoned', 'style', 'glazed', 'marinated', 'coated', 'fried', 'crispy'
+];
+
+/**
+ * Descriptor words to strip when finding head keyword
+ */
+const DESCRIPTOR_WORDS = [
+  'ground', 'boneless', 'skinless', 'raw', 'cooked', 'fresh', 'whole', 'chopped', 'sliced', 'diced'
+];
+
+/**
+ * Normalize and tokenize description for filtering
+ */
+function normalizeDescription(description: string): { tokens: string[], normalized: string } {
+  const normalized = description.toLowerCase()
+    .replace(/[^a-z0-9\s,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const tokens = normalized.split(/[\s,]+/).filter(t => t.length > 0);
+  
+  return { tokens, normalized };
+}
+
+/**
+ * Check if description contains hard-ban keywords
+ * Special handling: if query itself contains the keyword (e.g., "flour"), don't block
+ */
+function containsHardBanKeyword(description: string, query: string): boolean {
+  const { normalized } = normalizeDescription(description);
+  const queryLower = query.toLowerCase();
+  
+  for (const keyword of HARD_BAN_KEYWORDS) {
+    // If query contains this keyword, don't block (user is specifically searching for it)
+    if (queryLower.includes(keyword)) {
+      continue;
+    }
+    
+    // Check if description contains the banned keyword
+    if (normalized.includes(keyword)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Calculate relevance score for search result using multi-factor weighted algorithm
+ */
+function calculateRelevanceScore(description: string, query: string, dataType: string, brandOwner?: string): number {
   const descLower = description.toLowerCase();
   const queryLower = query.toLowerCase();
-  const queryTerms = queryLower.split(/\s+/);
+  const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 0);
+  const { tokens, normalized } = normalizeDescription(description);
   
   let score = 0;
   
-  // Exact match = highest score
-  if (descLower === queryLower) {
-    score += 100;
-  }
-  
-  // Starts with query = very high score
-  if (descLower.startsWith(queryLower)) {
-    score += 50;
-  }
-  
-  // Contains exact query = high score
-  if (descLower.includes(queryLower)) {
+  // === TERM COVERAGE ===
+  // Exact phrase match = +25
+  if (normalized.includes(queryLower)) {
     score += 25;
   }
   
-  // Contains all query terms = moderate score
-  const allTermsFound = queryTerms.every(term => descLower.includes(term));
+  // All query terms found = +15
+  const allTermsFound = queryTerms.every(term => normalized.includes(term));
   if (allTermsFound) {
     score += 15;
   }
   
-  // Count matching terms
-  const matchingTerms = queryTerms.filter(term => descLower.includes(term)).length;
+  // Per-term match = +5 each
+  const matchingTerms = queryTerms.filter(term => normalized.includes(term)).length;
   score += matchingTerms * 5;
   
-  // Penalty for very long descriptions (likely too specific)
-  if (description.length > 100) {
-    score -= 10;
+  // === HEADWORD ALIGNMENT ===
+  // Extract head keyword from query (strip descriptors)
+  const headKeyword = queryTerms.find(term => !DESCRIPTOR_WORDS.includes(term)) || queryTerms[0];
+  
+  // First token matches head keyword = +30
+  if (tokens[0] === headKeyword) {
+    score += 30;
+  }
+  // First token after comma matches = +15
+  else if (tokens.some((token, i) => i > 0 && tokens[i-1] === '' && token === headKeyword)) {
+    score += 15;
   }
   
-  // Bonus for shorter, simpler descriptions
-  if (description.length < 30) {
+  // === DATA TYPE PRIORITY ===
+  if (dataType === 'Foundation') {
+    score += 25;
+  } else if (dataType === 'SR Legacy') {
+    score += 15;
+  } else if (dataType === 'Branded') {
+    score -= 20;
+  }
+  
+  // === CANONICALITY & SIMPLICITY ===
+  // Short simple description = +10
+  if (description.length <= 35) {
+    score += 10;
+  }
+  
+  // No brand owner = more canonical
+  if (!brandOwner) {
     score += 5;
   }
   
-  return score;
-}
-
-/**
- * Filter out irrelevant foods (snacks, processed foods when searching whole foods)
- */
-function isRelevantFood(description: string, query: string): boolean {
-  const descLower = description.toLowerCase();
-  const queryLower = query.toLowerCase();
+  // Count comma segments
+  const segments = description.split(',').length;
+  if (segments <= 2) {
+    score += 5;
+  } else {
+    // Penalty for excessive segments
+    score -= (segments - 2) * 5;
+  }
   
-  // Irrelevant patterns to filter out
-  const irrelevantPatterns = [
-    /^snacks?,/i,           // "Snacks, rice cakes..."
-    /^candies,/i,           // "Candies, chocolate..."
-    /\(baby food\)/i,       // Baby food items
-    /\(infant formula\)/i,  // Infant formula
-    /\(alcoholic\)/i,       // Alcoholic beverages
-  ];
+  // === PENALTIES ===
+  // Processed adjectives = -15
+  const hasProcessedAdjectives = PROCESSED_ADJECTIVES.some(adj => normalized.includes(adj));
+  if (hasProcessedAdjectives) {
+    score -= 15;
+  }
   
-  // Whole food keywords - check if ANY word in query matches
-  const wholeFoodKeywords = [
-    'rice', 'chicken', 'beef', 'fish', 'turkey', 'pork', 'salmon', 'tuna', 'egg',
-    'apple', 'banana', 'oat', 'quinoa', 'potato', 'broccoli', 'spinach', 'carrot',
-    'avocado', 'almond', 'walnut', 'olive', 'cheese', 'milk', 'yogurt', 'tofu',
-    'lentil', 'bean', 'pea', 'corn', 'wheat', 'barley', 'bread', 'pasta', 'orange',
-    'strawberry', 'blueberry', 'grape', 'peach', 'pear', 'melon', 'cucumber', 'tomato'
-  ];
-  
-  // Check if any word in the query matches a whole food keyword
-  const queryWords = queryLower.split(/\s+/);
-  const isWholeFoodQuery = queryWords.some(word => wholeFoodKeywords.includes(word));
-  
-  if (isWholeFoodQuery) {
-    // Filter out snacks and highly processed foods
-    for (const pattern of irrelevantPatterns) {
-      if (pattern.test(description)) {
-        return false;
-      }
+  // Soft penalty keywords = -10 each
+  for (const keyword of SOFT_PENALTY_KEYWORDS) {
+    if (normalized.includes(keyword)) {
+      score -= 10;
     }
   }
   
-  return true;
+  // Very long description = likely too specific = -10
+  if (description.length > 80) {
+    score -= 10;
+  }
+  
+  // Floor score at 0
+  return Math.max(0, score);
 }
 
+
 /**
- * Remove duplicate/very similar results
+ * Remove duplicate/very similar results with improved normalization
+ * Handles variations like "Rice, brown, long-grain" vs "Rice, brown, long grain"
  */
 function deduplicateResults(results: USDASearchResult[]): USDASearchResult[] {
   const seen = new Set<string>();
   const unique: USDASearchResult[] = [];
   
   for (const food of results) {
-    // Create a normalized key for comparison
-    const key = food.description.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Normalize by removing punctuation, collapsing whitespace, extracting headword + key modifiers
+    const { normalized } = normalizeDescription(food.description);
+    const words = normalized.split(/\s+/).slice(0, 5); // First 5 words capture essence
+    const key = words.join(' ');
     
     if (!seen.has(key)) {
       seen.add(key);
@@ -202,8 +280,13 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
       return [];
     }
 
-    // Map results with basic nutrition info and relevance score
-    const results = data.foods.map((food: any) => ({
+    // Step 1: Apply hard ban filtering (blocks results completely)
+    const afterHardBan = data.foods.filter((food: any) => 
+      !containsHardBanKeyword(food.description, query)
+    );
+
+    // Step 2: Map results with nutrition info and calculate relevance score
+    const results = afterHardBan.map((food: any) => ({
       fdcId: food.fdcId,
       description: food.description,
       dataType: food.dataType,
@@ -212,27 +295,47 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
       protein: extractNutrient(food.foodNutrients, 1003), // Protein
       carbs: extractNutrient(food.foodNutrients, 1005), // Carbs
       fat: extractNutrient(food.foodNutrients, 1004), // Total lipid (fat)
-      _relevanceScore: calculateRelevanceScore(food.description, query),
+      _relevanceScore: calculateRelevanceScore(food.description, query, food.dataType, food.brandOwner),
     }));
 
-    // Filter out irrelevant foods
-    const filtered = results.filter((food: any) => isRelevantFood(food.description, query));
+    // Step 3: Sort by relevance score (highest first), then by data type as tie-breaker
+    const sorted = results.sort((a: any, b: any) => {
+      // Primary sort by score
+      if (b._relevanceScore !== a._relevanceScore) {
+        return b._relevanceScore - a._relevanceScore;
+      }
+      
+      // Tie-breaker: Foundation > SR Legacy > Branded
+      const dataTypePriority: Record<string, number> = {
+        'Foundation': 3,
+        'SR Legacy': 2,
+        'Branded': 1,
+      };
+      
+      const aPriority = dataTypePriority[a.dataType] || 0;
+      const bPriority = dataTypePriority[b.dataType] || 0;
+      
+      return bPriority - aPriority;
+    });
     
-    // Sort by relevance score (highest first)
-    const sorted = filtered.sort((a: any, b: any) => b._relevanceScore - a._relevanceScore);
-    
-    // Deduplicate similar results
+    // Step 4: Deduplicate similar results
     const deduplicated = deduplicateResults(sorted);
     
-    // Limit to requested page size
+    // Step 5: Limit to requested page size
     const limited = deduplicated.slice(0, pageSize);
     
-    console.log('🔍 USDA search:', {
+    console.log('🔍 USDA search results:', {
       query,
-      totalResults: data.foods.length,
-      afterFiltering: filtered.length,
+      totalFromAPI: data.foods.length,
+      afterHardBan: afterHardBan.length,
+      afterScoring: results.length,
       afterDedup: deduplicated.length,
       returned: limited.length,
+      topResults: limited.slice(0, 3).map((f: any) => ({
+        desc: f.description,
+        score: f._relevanceScore,
+        type: f.dataType
+      }))
     });
     
     return limited;
