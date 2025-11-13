@@ -19,6 +19,7 @@ const ActiveMealPlanWidget: React.FC<ActiveMealPlanWidgetProps> = ({ plan, addMe
     const [swapModalOpen, setSwapModalOpen] = useState(false);
     const [selectedFoodForSwap, setSelectedFoodForSwap] = useState<{ mealIndex: number, itemIndex: number, item: MealPlanItem, category: 'protein' | 'carbs' | 'fats' } | null>(null);
     const [catalogFoods, setCatalogFoods] = useState<CatalogFoodItem[]>([]);
+    const [catalogLoading, setCatalogLoading] = useState(true);
     const [userPreferences, setUserPreferences] = useState({ favorites: [] as number[], blacklisted: [] as number[] });
 
     const loggedMealTypes = new Set(mealsToday.map(m => m.type));
@@ -44,15 +45,23 @@ const ActiveMealPlanWidget: React.FC<ActiveMealPlanWidgetProps> = ({ plan, addMe
     
     useEffect(() => {
         const loadFoodCatalog = async () => {
-            const foods = await foodCatalogService.getAllFoods();
-            setCatalogFoods(foods);
-            
-            const prefs = await foodCatalogService.getUserPreferences();
-            if (prefs) {
-                setUserPreferences({
-                    favorites: prefs.favorited_foods || [],
-                    blacklisted: prefs.blacklisted_foods || [],
-                });
+            let foods: CatalogFoodItem[] = [];
+            try {
+                foods = await foodCatalogService.getAllFoods();
+                console.log('📦 Loaded catalog foods:', foods.length);
+                setCatalogFoods(foods);
+                
+                const prefs = await foodCatalogService.getUserPreferences();
+                if (prefs) {
+                    setUserPreferences({
+                        favorites: prefs.favorited_foods || [],
+                        blacklisted: prefs.blacklisted_foods || [],
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load food catalog:', error);
+                setCatalogLoading(false);
+                return;
             }
 
             const hasUnhydratedItems = plan.dailyPlan.meals.some(meal =>
@@ -60,6 +69,7 @@ const ActiveMealPlanWidget: React.FC<ActiveMealPlanWidgetProps> = ({ plan, addMe
             );
 
             if (!hasUnhydratedItems) {
+                setCatalogLoading(false);
                 return;
             }
 
@@ -92,6 +102,8 @@ const ActiveMealPlanWidget: React.FC<ActiveMealPlanWidgetProps> = ({ plan, addMe
             if (needsUpdate) {
                 onPlanUpdate(hydratedPlan);
             }
+            
+            setCatalogLoading(false);
         };
         
         loadFoodCatalog();
@@ -105,6 +117,11 @@ const ActiveMealPlanWidget: React.FC<ActiveMealPlanWidgetProps> = ({ plan, addMe
 
     const handleSwapClick = (mealIndex: number, itemIndex: number, item: MealPlanItem) => {
         const category = determineFoodCategory(item);
+        console.log('🔍 Swap clicked:', { 
+            category, 
+            totalCatalogFoods: catalogFoods.length,
+            foodsInCategory: catalogFoods.filter(f => f.category === category).length
+        });
         setSelectedFoodForSwap({ mealIndex, itemIndex, item, category });
         setSwapModalOpen(true);
     };
@@ -243,10 +260,11 @@ const ActiveMealPlanWidget: React.FC<ActiveMealPlanWidgetProps> = ({ plan, addMe
                                             </p>
                                             <button
                                                 onClick={() => handleSwapClick(index, itemIndex, item)}
-                                                className="ml-2 px-2 py-1 text-xs bg-zinc-700 hover:bg-green-500 hover:text-black text-zinc-400 rounded transition-all opacity-0 group-hover:opacity-100"
-                                                title="Swap food"
+                                                disabled={catalogLoading}
+                                                className="ml-2 px-2 py-1 text-xs bg-zinc-700 hover:bg-green-500 hover:text-black text-zinc-400 rounded transition-all opacity-0 group-hover:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title={catalogLoading ? "Loading food catalog..." : "Swap food"}
                                             >
-                                                🔄 Swap
+                                                {catalogLoading ? '⏳' : '🔄'} Swap
                                             </button>
                                         </div>
                                     ))}

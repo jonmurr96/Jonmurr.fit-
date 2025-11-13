@@ -156,6 +156,13 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
       // Meal Plan Generation
       (async () => {
         const heightCm = (onboardingData.heightFt * 12 + onboardingData.heightIn) * 2.54;
+        
+        // Use TRAINING DAY macros for meal plan (10% more calories, 5% more protein, 15% more carbs)
+        const trainingDayCalories = Math.round(onboardingData.dailyCalories * 1.1);
+        const trainingDayProtein = Math.round(onboardingData.proteinG * 1.05);
+        const trainingDayCarbs = Math.round(onboardingData.carbsG * 1.15);
+        const trainingDayFat = onboardingData.fatsG; // Fat stays the same
+        
         const mealPreferences: NutritionPlanPreferences = {
           gender: onboardingData.gender === 'male' ? 'Male' : onboardingData.gender === 'female' ? 'Female' : 'Non-Binary',
           age: calculateAge(onboardingData.dateOfBirth),
@@ -174,12 +181,19 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
           mealSimplicity: 'Moderate variety',
           sleep: mapSleepDuration(onboardingData.averageSleepHours),
           waterIntake: mapWaterIntake(onboardingData.waterIntakeOz),
-          // Pass calculated macro targets from onboarding for exact matching
-          targetCalories: onboardingData.dailyCalories,
-          targetProtein: onboardingData.proteinG,
-          targetCarbs: onboardingData.carbsG,
-          targetFat: onboardingData.fatsG,
+          // CRITICAL: Use TRAINING DAY macros for meal plan (users eat more on workout days)
+          targetCalories: trainingDayCalories,
+          targetProtein: trainingDayProtein,
+          targetCarbs: trainingDayCarbs,
+          targetFat: trainingDayFat,
         };
+        
+        console.log('🍽️ Generating meal plan with TRAINING DAY macros:', {
+          calories: trainingDayCalories,
+          protein: trainingDayProtein,
+          carbs: trainingDayCarbs,
+          fat: trainingDayFat
+        });
 
         const generatedMealPlan = await generateMealPlan(mealPreferences);
         

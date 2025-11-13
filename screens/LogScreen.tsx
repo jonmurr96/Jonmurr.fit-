@@ -450,14 +450,12 @@ const LogScreenComponent: React.FC<LogScreenProps> = (props) => {
         )}
         <MealPlannerWidget onClick={() => setShowMealPlanner(true)} />
         
-        {!activeMealPlan && (
-          <button
-            onClick={() => setShowManualBuilder(true)}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-600 transition-all shadow-lg"
-          >
-            🍽️ Build Manual Meal Plan
-          </button>
-        )}
+        <button
+          onClick={() => setShowManualBuilder(true)}
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-600 transition-all shadow-lg"
+        >
+          🍽️ {activeMealPlan ? 'Create New Manual Meal Plan' : 'Build Manual Meal Plan'}
+        </button>
         
         {activeMealPlan && (
           <ActiveMealPlanWidget 

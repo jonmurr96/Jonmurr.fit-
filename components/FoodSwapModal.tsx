@@ -41,6 +41,10 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
 
   const allTags: string[] = Array.from(new Set(foods.flatMap(food => food.tags || [])));
 
+  if (foods.length === 0) {
+    console.warn('⚠️ FoodSwapModal received empty foods array!');
+  }
+
   const filteredFoods = foods
     .filter(food => {
       if (!blacklisted.includes(food.id)) {
