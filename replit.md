@@ -26,7 +26,8 @@ The application features a modern, engaging design with a focus on gamification,
 ### Feature Specifications
 - **Daily Macro Tracking**: Users can log and track calories, protein, carbohydrates, and fats.
 - **AI-Powered Planning**: Generation of personalized workout routines and meal plans during onboarding with parallel AI generation using `Promise.allSettled`.
-- **Food Swap Catalog System**: Interactive meal plan customization with a curated catalog of 60 foods across protein/carbs/fats categories. Features include real-time food swapping with automatic macro recalculation, category-based filtering, search functionality, favorites management, and swap history tracking.
+- **Manual Meal Plan Builder**: Users can create custom meal plans from scratch using the 60-food catalog, with category browsing, search, real-time macro calculations, and serving size adjustments. Manual plans integrate seamlessly with the same activation and swap systems as AI-generated plans.
+- **Food Swap Catalog System**: Interactive meal plan customization with a curated catalog of 60 foods across protein/carbs/fats categories. Features include real-time food swapping with automatic macro recalculation, category-based filtering, search functionality, favorites management, and swap history tracking. Works with both AI-generated and manually-created meal plans.
 - **Progress Visualization**: Charts, graphs, and heat maps to track fitness journey and achievements.
 - **Workout Management**: Users can save, organize by status (Active, Draft, Library), and set active workout plans.
 - **Health Checks**: An integrated health check system detects missing Supabase tables and guides users through schema application.
