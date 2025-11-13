@@ -264,7 +264,12 @@ export const generateMealPlan = async (preferences: NutritionPlanPreferences): P
     - Target Carbs: ${preferences.targetCarbs}g (acceptable range: ${Math.round(preferences.targetCarbs * 0.97)}-${Math.round(preferences.targetCarbs * 1.03)}g, ±3%)
     - Target Fat: ${preferences.targetFat}g (acceptable range: ${Math.round(preferences.targetFat * 0.97)}-${Math.round(preferences.targetFat * 1.03)}g, ±3%)
     
-    **IMPORTANT:** The dailyPlan.totalCalories, totalProtein, totalCarbs, and totalFat in your JSON response MUST fall within these acceptable ranges. Adjust food portions precisely to hit these targets.
+    **CRITICAL REQUIREMENT:** 
+    1. The dailyPlan.totalCalories, totalProtein, totalCarbs, and totalFat MUST be calculated by summing ALL individual food items across ALL meals
+    2. These totals MUST fall within the acceptable target ranges above (±3%)
+    3. Adjust food portions precisely so that when you sum all meal items, the totals match the targets
+    4. DO NOT just copy the target values into the totals - calculate them from your actual meal items
+    5. Verify your math: SUM(all breakfast + lunch + dinner + snacks calories) = dailyPlan.totalCalories (within ±3% of target)
     `
         : `
     Generate:
@@ -359,7 +364,52 @@ ${macroTargetSection}
         });
 
         const jsonStr = response.text.trim();
-        return JSON.parse(jsonStr) as GeneratedMealPlan;
+        const plan = JSON.parse(jsonStr) as GeneratedMealPlan;
+        
+        // CRITICAL: Validate and recalculate totals from actual meal items
+        let actualTotalCalories = 0;
+        let actualTotalProtein = 0;
+        let actualTotalCarbs = 0;
+        let actualTotalFat = 0;
+        
+        plan.dailyPlan.meals.forEach(meal => {
+            meal.items.forEach(item => {
+                actualTotalCalories += Number(item.calories) || 0;
+                actualTotalProtein += Number(item.protein) || 0;
+                actualTotalCarbs += Number(item.carbs) || 0;
+                actualTotalFat += Number(item.fat) || 0;
+            });
+        });
+        
+        // Log warning if AI's totals don't match actual sums (±3% tolerance)
+        const caloriesDiff = Math.abs(actualTotalCalories - plan.dailyPlan.totalCalories);
+        const proteinDiff = Math.abs(actualTotalProtein - plan.dailyPlan.totalProtein);
+        const carbsDiff = Math.abs(actualTotalCarbs - plan.dailyPlan.totalCarbs);
+        const fatDiff = Math.abs(actualTotalFat - plan.dailyPlan.totalFat);
+        
+        if (caloriesDiff > plan.dailyPlan.totalCalories * 0.03 || 
+            proteinDiff > plan.dailyPlan.totalProtein * 0.03 ||
+            carbsDiff > plan.dailyPlan.totalCarbs * 0.03 ||
+            fatDiff > plan.dailyPlan.totalFat * 0.03) {
+            console.warn('⚠️ AI macro totals mismatch! Recalculating from meal items:', {
+                aiCalories: plan.dailyPlan.totalCalories,
+                actualCalories: actualTotalCalories,
+                aiProtein: plan.dailyPlan.totalProtein,
+                actualProtein: actualTotalProtein,
+                aiCarbs: plan.dailyPlan.totalCarbs,
+                actualCarbs: actualTotalCarbs,
+                aiFat: plan.dailyPlan.totalFat,
+                actualFat: actualTotalFat
+            });
+        }
+        
+        // Always use actual sums to ensure accuracy
+        plan.dailyPlan.totalCalories = Math.round(actualTotalCalories);
+        plan.dailyPlan.totalProtein = Math.round(actualTotalProtein);
+        plan.dailyPlan.totalCarbs = Math.round(actualTotalCarbs);
+        plan.dailyPlan.totalFat = Math.round(actualTotalFat);
+        
+        return plan;
     } catch (error) {
         console.error("Error generating meal plan:", error);
         return null;

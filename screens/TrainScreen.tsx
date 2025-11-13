@@ -534,14 +534,15 @@ const PlanPreview: React.FC<{
 
 const SetRow: React.FC<{
   set: WorkoutSet;
+  setNumber: number;
   onToggle: () => void;
   onUpdate: (field: 'actualWeight' | 'actualReps' | 'rpe', value: string) => void;
   weightUnit: 'kg' | 'lbs';
   onDelete: () => void;
-}> = ({ set, onToggle, onUpdate, weightUnit, onDelete }) => {
+}> = ({ set, setNumber, onToggle, onUpdate, weightUnit, onDelete }) => {
   return (
     <div className="flex items-center justify-between py-2 px-3 bg-zinc-800 rounded-md gap-2">
-      <span className="font-mono text-zinc-400 w-6 text-center">{set.id}</span>
+      <span className="font-mono text-zinc-400 w-6 text-center">{setNumber}</span>
       <span className="text-white font-medium w-24 truncate">{set.targetReps}</span>
       
       <div className="flex-1">
@@ -617,10 +618,11 @@ const ExerciseCard: React.FC<{
         </div>
       </div>
       <div className="mt-4 space-y-2">
-        {exercise.sets.map((set) => (
+        {exercise.sets.map((set, index) => (
           <SetRow
             key={set.id}
             set={set}
+            setNumber={index + 1}
             onToggle={() => onSetToggle(exercise.id, set.id)}
             onUpdate={(field, value) => onSetUpdate(exercise.id, set.id, field, value)}
             weightUnit={weightUnit}
