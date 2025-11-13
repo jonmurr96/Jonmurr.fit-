@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUserServices } from '../hooks/useUserServices';
 import { FoodItem as CatalogFoodItem } from '../services/database/foodCatalogService';
 import { GeneratedMealPlan, MealPlanItem } from '../types';
+import { searchUSDAFoods, convertToSimplifiedFood, SimplifiedFood } from '../services/usdaFoodService';
 
 interface ManualMealPlanBuilderProps {
   onClose: () => void;
@@ -16,10 +17,13 @@ interface MealSlot {
 const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, onSave }) => {
   const { foodCatalogService } = useUserServices();
   const [catalogFoods, setCatalogFoods] = useState<CatalogFoodItem[]>([]);
+  const [usdaFoods, setUsdaFoods] = useState<SimplifiedFood[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [activeCategory, setActiveCategory] = useState<'protein' | 'carbs' | 'fats'>('protein');
   const [searchQuery, setSearchQuery] = useState('');
   const [planName, setPlanName] = useState('My Custom Plan');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showQuickPicks, setShowQuickPicks] = useState(true);
   
   const [meals, setMeals] = useState<MealSlot[]>([
     { name: 'Breakfast', items: [] },
@@ -29,10 +33,12 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
     { name: 'Snack 2', items: [] },
   ]);
 
+  // Load quick picks from catalog (60 curated foods)
   useEffect(() => {
     const loadFoodCatalog = async () => {
       const foods = await foodCatalogService.getAllFoods();
       setCatalogFoods(foods);
+      console.log('📦 Loaded catalog quick picks:', foods.length, 'foods');
       
       const prefs = await foodCatalogService.getUserPreferences();
       if (prefs) {
@@ -43,9 +49,39 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
     loadFoodCatalog();
   }, [foodCatalogService]);
 
-  const filteredFoods = catalogFoods
+  // Search USDA database when user types
+  useEffect(() => {
+    const searchUSDA = async () => {
+      if (searchQuery.trim().length < 2) {
+        setUsdaFoods([]);
+        setShowQuickPicks(true);
+        return;
+      }
+
+      setIsSearching(true);
+      setShowQuickPicks(false);
+      
+      try {
+        const results = await searchUSDAFoods(searchQuery, 50);
+        const simplified = results.map(convertToSimplifiedFood);
+        const filtered = simplified.filter(food => food.category === activeCategory);
+        setUsdaFoods(filtered);
+        console.log('🔍 USDA search results:', filtered.length, 'foods');
+      } catch (error) {
+        console.error('Error searching USDA:', error);
+        setUsdaFoods([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(searchUSDA, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery, activeCategory]);
+
+  // Quick picks (catalog foods)
+  const filteredQuickPicks = catalogFoods
     .filter(food => food.category === activeCategory)
-    .filter(food => food.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
       const aFav = favorites.includes(a.id);
       const bFav = favorites.includes(b.id);
@@ -54,16 +90,27 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
       return a.name.localeCompare(b.name);
     });
 
-  const addFoodToMeal = (mealIndex: number, food: CatalogFoodItem, servings: number = 1) => {
+  // Determine which foods to display
+  const displayedFoods = showQuickPicks ? filteredQuickPicks : usdaFoods;
+
+  const addFoodToMeal = (mealIndex: number, food: CatalogFoodItem | SimplifiedFood, servings: number = 1) => {
     const newMeals = [...meals];
+    
+    // Handle both catalog and USDA foods
+    const servingSize = ('serving_size' in food) ? food.serving_size : (food as SimplifiedFood).servingSize;
+    const servingUnit = ('serving_unit' in food) ? food.serving_unit : (food as SimplifiedFood).servingUnit;
+    const protein = ('protein_g' in food) ? food.protein_g : (food as SimplifiedFood).protein;
+    const carbs = ('carbs_g' in food) ? food.carbs_g : (food as SimplifiedFood).carbs;
+    const fat = ('fat_g' in food) ? food.fat_g : (food as SimplifiedFood).fat;
+    
     const mealItem: MealPlanItem = {
       food: food.name,
-      quantity: `${food.serving_size * servings}${food.serving_unit}`,
+      quantity: `${servingSize * servings}${servingUnit}`,
       calories: food.calories * servings,
-      protein: food.protein_g * servings,
-      carbs: food.carbs_g * servings,
-      fat: food.fat_g * servings,
-      catalogFoodId: food.id,
+      protein: protein * servings,
+      carbs: carbs * servings,
+      fat: fat * servings,
+      catalogFoodId: 'source' in food && food.source === 'usda' ? undefined : food.id,
     };
     newMeals[mealIndex].items.push(mealItem);
     setMeals(newMeals);
@@ -222,35 +269,69 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
               {/* Search */}
               <input
                 type="text"
-                placeholder="Search foods..."
+                placeholder="Search USDA database (1000+ foods)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
+              
+              {!showQuickPicks && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-blue-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Searching USDA database - all nutrition values per 100g</span>
+                </div>
+              )}
+              {showQuickPicks && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Showing quick picks - Type to search 1000+ USDA foods</span>
+                </div>
+              )}
             </div>
 
             {/* Food List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {filteredFoods.map(food => {
+              {isSearching && (
+                <div className="text-center py-8">
+                  <div className="inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="mt-2 text-zinc-400">Searching USDA database...</p>
+                </div>
+              )}
+              
+              {!isSearching && displayedFoods.map((food: CatalogFoodItem | SimplifiedFood) => {
                 const isFavorite = favorites.includes(food.id);
+                const isUSDA = 'source' in food && food.source === 'usda';
+                
+                // Get macros safely
+                const protein = ('protein_g' in food) ? food.protein_g : (food as SimplifiedFood).protein;
+                const carbs = ('carbs_g' in food) ? food.carbs_g : (food as SimplifiedFood).carbs;
+                const fat = ('fat_g' in food) ? food.fat_g : (food as SimplifiedFood).fat;
+                const servingSize = ('serving_size' in food) ? food.serving_size : (food as SimplifiedFood).servingSize;
+                const servingUnit = ('serving_unit' in food) ? food.serving_unit : (food as SimplifiedFood).servingUnit;
+                
                 return (
                   <div
-                    key={food.id}
+                    key={`${isUSDA ? 'usda' : 'cat'}-${food.id}`}
                     className="bg-zinc-800 rounded-lg p-3 hover:bg-zinc-750 transition-colors"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-white">{food.name}</p>
                         {isFavorite && <span className="text-yellow-400 text-sm">⭐</span>}
+                        {isUSDA && <span className="text-xs bg-blue-600 px-2 py-0.5 rounded text-white">USDA</span>}
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-white">{Math.round(food.calories)} kcal</p>
                         <p className="text-xs text-zinc-400">
-                          P: {food.protein_g}g · C: {food.carbs_g}g · F: {food.fat_g}g
+                          P: {Math.round(protein)}g · C: {Math.round(carbs)}g · F: {Math.round(fat)}g
                         </p>
                       </div>
                     </div>
-                    <p className="text-xs text-zinc-400 mb-3">{food.serving_size}{food.serving_unit}</p>
+                    <p className="text-xs text-zinc-400 mb-3">{servingSize}{servingUnit}</p>
                     
                     {/* Add to Meal Buttons */}
                     <div className="flex flex-wrap gap-1">
@@ -267,9 +348,13 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                   </div>
                 );
               })}
-              {filteredFoods.length === 0 && (
+              
+              {!isSearching && displayedFoods.length === 0 && (
                 <div className="text-center py-8 text-zinc-500">
-                  <p>No foods found</p>
+                  <p>{showQuickPicks ? 'No foods in this category' : 'No foods found. Try a different search.'}</p>
+                  {!showQuickPicks && (
+                    <p className="text-xs mt-2">Searching {activeCategory} foods in USDA database...</p>
+                  )}
                 </div>
               )}
             </div>
