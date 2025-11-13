@@ -7,6 +7,7 @@ import MealPlannerWizard from './MealPlannerWizard';
 import MealPlanView from './MealPlanView';
 import ActiveMealPlanWidget from '../components/ActiveMealPlanWidget';
 import MealPlanEditor from './MealPlanEditor';
+import ManualMealPlanBuilder from '../components/ManualMealPlanBuilder';
 
 declare global {
   interface Window {
@@ -229,6 +230,7 @@ const LogScreenComponent: React.FC<LogScreenProps> = (props) => {
   const [showAddQuickAddModal, setShowAddQuickAddModal] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [showMealPlanner, setShowMealPlanner] = useState(false);
+  const [showManualBuilder, setShowManualBuilder] = useState(false);
   const [isEditingMealPlan, setIsEditingMealPlan] = useState(false);
 
 
@@ -365,6 +367,11 @@ const LogScreenComponent: React.FC<LogScreenProps> = (props) => {
       setIsEditingMealPlan(false);
   };
 
+  const handleSaveManualPlan = (plan: GeneratedMealPlan) => {
+      onActivateMealPlan(plan);
+      setShowManualBuilder(false);
+  };
+
   const mealTypes: Meal['type'][] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 
   return (
@@ -442,6 +449,16 @@ const LogScreenComponent: React.FC<LogScreenProps> = (props) => {
           </div>
         )}
         <MealPlannerWidget onClick={() => setShowMealPlanner(true)} />
+        
+        {!activeMealPlan && (
+          <button
+            onClick={() => setShowManualBuilder(true)}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-600 transition-all shadow-lg"
+          >
+            🍽️ Build Manual Meal Plan
+          </button>
+        )}
+        
         {activeMealPlan && (
           <ActiveMealPlanWidget 
             plan={activeMealPlan}
@@ -458,6 +475,7 @@ const LogScreenComponent: React.FC<LogScreenProps> = (props) => {
       {showVoiceTip && <VoiceTipModal onStart={handleStartFromTip} onClose={() => setShowVoiceTip(false)} />}
       {showAddQuickAddModal && <AddQuickAddModal onClose={handleCloseAddQuickAddModal} onSave={handleSaveQuickAddMeal} />}
       {showMealPlanner && <MealPlannerWizard user={user} currentWeightKg={currentWeightKg} weightUnit={weightUnit} onClose={() => setShowMealPlanner(false)} onGenerate={handleGeneratePlan}/>}
+      {showManualBuilder && <ManualMealPlanBuilder onClose={() => setShowManualBuilder(false)} onSave={handleSaveManualPlan} />}
       {isGeneratingMealPlan && <GenerationLoadingModal />}
       {generatedMealPlan && !activeMealPlan && <MealPlanView plan={generatedMealPlan} onActivate={onActivateMealPlan} />}
       {isEditingMealPlan && activeMealPlan && (
