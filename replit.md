@@ -4,7 +4,7 @@
 Jonmurr.fit is an AI-powered fitness tracking application that provides personalized workout planning and meal suggestions using Google's Gemini AI. Built with React, TypeScript, and Vite, the project aims to gamify the fitness journey through XP, leveling, and challenges, offering a comprehensive solution for users to track progress and achieve health goals. The business vision is to provide an engaging, personalized fitness solution that leverages AI for tailored guidance and gamification for sustained user engagement, standing out in the market.
 
 ## User Preferences
-None documented yet - this is a fresh import.
+- **Meal Plans Favor Training Day Macros**: AI-generated meal plans use training day macro targets (+10% calories, +5% protein, +15% carbs) instead of rest day targets to better support workout performance and recovery.
 
 ## System Architecture
 
