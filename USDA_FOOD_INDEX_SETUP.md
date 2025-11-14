@@ -104,6 +104,24 @@ The application automatically detects if the index is populated:
 
 ## Architecture
 
+### Data Type Normalization
+
+The ingestion script normalizes USDA API data_type values to match database constraints:
+
+**Supported Mappings:**
+- `Foundation` → `Foundation`
+- `SR Legacy` → `SR Legacy`
+- `Branded` → `Branded`
+- `Survey (FNDDS)` → `Survey`
+- `Survey` → `Survey`
+
+**Unsupported Types (Skipped):**
+- `Experimental Foods` - Logged as warning and skipped
+- `Sample Food` - Logged as warning and skipped
+- Unknown types - Logged as warning and skipped
+
+This ensures only high-quality, production-ready foods are indexed while maintaining data integrity.
+
 ### Database Schema
 
 **usda_foods_index table:**

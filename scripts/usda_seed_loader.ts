@@ -204,6 +204,48 @@ function generateSearchTerms(description: string): string[] {
 }
 
 /**
+ * Normalize USDA data_type to match database constraint
+ * USDA API returns various formats: "Survey (FNDDS)", "SR Legacy", "Foundation", "Branded", etc.
+ * Database allows: 'Foundation', 'SR Legacy', 'Branded', 'Survey'
+ * 
+ * @returns Normalized data_type or null if unknown (caller should skip the food)
+ */
+function normalizeDataType(dataType: string): string | null {
+  if (!dataType) {
+    console.warn('⚠️  Missing data_type, skipping food');
+    return null;
+  }
+  
+  // Explicit mapping of known USDA data types
+  // Only map to allowed values: 'Foundation', 'SR Legacy', 'Branded', 'Survey'
+  const typeMapping: Record<string, string> = {
+    'Foundation': 'Foundation',
+    'SR Legacy': 'SR Legacy',
+    'Branded': 'Branded',
+    'Survey (FNDDS)': 'Survey',
+    'Survey': 'Survey',
+    // These are actual USDA types but not allowed in our schema - they'll be skipped
+    // 'Experimental Foods': null,
+    // 'Sample Food': null,
+  };
+  
+  // Check direct mapping first
+  if (typeMapping[dataType]) {
+    return typeMapping[dataType];
+  }
+  
+  // Try removing parenthetical parts and check again
+  const cleaned = dataType.split('(')[0].trim();
+  if (typeMapping[cleaned]) {
+    return typeMapping[cleaned];
+  }
+  
+  // Unknown data_type - log warning and skip
+  console.warn(`⚠️  Unknown USDA data_type: "${dataType}" - skipping food`);
+  return null;
+}
+
+/**
  * Search USDA API for a specific keyword
  */
 async function searchUSDA(keyword: string, pageSize: number = 50): Promise<USDAFoodResult[]> {
@@ -289,6 +331,14 @@ async function ingestUSDAFoods() {
         continue;
       }
       
+      // Normalize data type
+      const normalizedDataType = normalizeDataType(food.dataType);
+      if (!normalizedDataType) {
+        // Skip food if data_type is unknown/unsupported
+        totalFiltered++;
+        continue;
+      }
+      
       // Determine metadata
       const category = determineCategory(protein, carbs, fat);
       const preparationMethod = detectPreparationMethod(food.description);
@@ -306,7 +356,7 @@ async function ingestUSDAFoods() {
         fat,
         serving_size: 100,
         serving_unit: 'g',
-        data_type: food.dataType,
+        data_type: normalizedDataType,
         is_canonical: canonical,
         preparation_method: preparationMethod,
         search_terms: searchTerms,

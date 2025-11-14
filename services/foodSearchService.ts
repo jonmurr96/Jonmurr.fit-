@@ -48,9 +48,6 @@ export async function searchFoodIndex(
     const queryLower = query.toLowerCase().trim();
     const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 0);
     
-    // Build PostgreSQL full-text search query
-    const tsQuery = queryTerms.join(' & '); // AND all terms
-    
     // Execute hybrid search query
     let dbQuery = supabase
       .from('usda_foods_index')
@@ -62,7 +59,8 @@ export async function searchFoodIndex(
     }
     
     // Use full-text search for initial filtering
-    dbQuery = dbQuery.textSearch('search_vector', tsQuery, {
+    // Pass natural language query directly - websearch type handles AND logic
+    dbQuery = dbQuery.textSearch('search_vector', queryLower, {
       type: 'websearch',
       config: 'english'
     });
