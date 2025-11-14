@@ -135,9 +135,11 @@ async function trigramFallbackSearch(
  * - Per-term matches: +10 each
  * - First word match: +30
  * - Preparation method match: +20
- * - Canonical food bonus: +15
- * - Data type priority: Foundation +20, SR Legacy +10
+ * - Canonical food bonus: +30 (increased from +15)
+ * - Data type priority: Foundation +30, SR Legacy +15
  * - Short/simple name: +10
+ * - Compound food penalties: -20 to -40
+ * - Incompatible term filtering: -100 (essentially removes from results)
  */
 function calculateSearchScore(
   food: IndexedFood,
@@ -149,6 +151,13 @@ function calculateSearchScore(
   const queryLower = originalQuery.toLowerCase();
   
   let score = 0;
+  
+  // === INCOMPATIBLE TERM FILTERING ===
+  // Detect semantically incompatible foods (e.g., "bratwurst" when searching "ground chicken")
+  const incompatibleTerms = detectIncompatibleTerms(nameLower, queryTerms);
+  if (incompatibleTerms) {
+    score -= 100; // Essentially remove from results
+  }
   
   // === EXACT MATCH BOOST ===
   // Exact match on normalized name
@@ -190,18 +199,25 @@ function calculateSearchScore(
   }
   
   // === CANONICALITY BONUS ===
+  // Boost simple, canonical foods more aggressively
   if (food.is_canonical) {
-    score += 15;
+    score += 30; // Increased from +15
   }
   
   // === DATA TYPE PRIORITY ===
+  // Prefer Foundation and SR Legacy over Branded
   if (food.data_type === 'Foundation') {
-    score += 20;
+    score += 30; // Increased from +20
   } else if (food.data_type === 'SR Legacy') {
-    score += 10;
+    score += 15; // Increased from +10
   } else if (food.data_type === 'Branded') {
     score -= 5; // Slight penalty for branded foods
   }
+  
+  // === COMPOUND FOOD PENALTIES ===
+  // Penalize foods with multiple ingredients or complex preparations
+  const compoundPenalty = detectCompoundFood(nameLower);
+  score -= compoundPenalty;
   
   // === SIMPLICITY BONUS ===
   // Short, simple names are likely more canonical
@@ -218,6 +234,112 @@ function calculateSearchScore(
   }
   
   return Math.max(0, score);
+}
+
+/**
+ * Detect compound foods (medleys, mixes, casseroles, etc.)
+ * Returns penalty score (0 = simple food, higher = more complex)
+ */
+function detectCompoundFood(nameLower: string): number {
+  let penalty = 0;
+  
+  // Strong indicators of compound/prepared dishes
+  const strongCompoundIndicators = [
+    'medley', 'mix', 'mixture', 'combo', 'combination',
+    'casserole', 'stew', 'soup', 'salad', 'bowl',
+    'platter', 'plate', 'meal', 'dish', 'entree'
+  ];
+  
+  // Moderate indicators
+  const moderateCompoundIndicators = [
+    'with', 'and', 'plus', 'topped', 'stuffed',
+    'filled', 'layered', 'wrapped', 'covered'
+  ];
+  
+  // Weak indicators
+  const weakCompoundIndicators = [
+    'style', 'flavored', 'seasoned', 'marinated'
+  ];
+  
+  // Check for strong compound indicators
+  for (const indicator of strongCompoundIndicators) {
+    if (nameLower.includes(indicator)) {
+      penalty += 40; // Heavy penalty
+      break; // Only apply once
+    }
+  }
+  
+  // Check for moderate indicators
+  for (const indicator of moderateCompoundIndicators) {
+    if (nameLower.includes(indicator)) {
+      penalty += 20;
+      break;
+    }
+  }
+  
+  // Check for weak indicators
+  for (const indicator of weakCompoundIndicators) {
+    if (nameLower.includes(indicator)) {
+      penalty += 10;
+      break;
+    }
+  }
+  
+  return penalty;
+}
+
+/**
+ * Detect incompatible terms between query and food name
+ * Returns true if food contains terms that conflict with the query
+ */
+function detectIncompatibleTerms(nameLower: string, queryTerms: string[]): boolean {
+  // Protein type conflicts
+  const proteinTypes = {
+    'chicken': ['beef', 'pork', 'lamb', 'turkey', 'fish', 'salmon', 'tuna', 'shrimp', 'tofu'],
+    'beef': ['chicken', 'pork', 'lamb', 'turkey', 'fish', 'salmon', 'tuna', 'shrimp'],
+    'pork': ['chicken', 'beef', 'lamb', 'turkey', 'fish', 'salmon', 'tuna', 'shrimp'],
+    'turkey': ['chicken', 'beef', 'pork', 'lamb', 'fish', 'salmon', 'tuna', 'shrimp'],
+    'fish': ['chicken', 'beef', 'pork', 'lamb', 'turkey'],
+    'salmon': ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'tuna'],
+    'tuna': ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'salmon'],
+    'shrimp': ['chicken', 'beef', 'pork', 'lamb', 'turkey'],
+    'tofu': ['chicken', 'beef', 'pork', 'lamb', 'turkey', 'fish'],
+  };
+  
+  // Check if query contains a protein type
+  for (const [queryProtein, incompatibleProteins] of Object.entries(proteinTypes)) {
+    if (queryTerms.includes(queryProtein)) {
+      // Check if food name contains an incompatible protein
+      for (const incompatible of incompatibleProteins) {
+        if (nameLower.includes(incompatible)) {
+          // Exception: allow if it's a comparison or option (e.g., "or beef")
+          if (!nameLower.includes('or ' + incompatible) && !nameLower.includes(incompatible + ' or')) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  
+  // Specific product conflicts (e.g., "bratwurst" vs "ground")
+  const specificConflicts: Record<string, string[]> = {
+    'ground': ['bratwurst', 'sausage', 'hot dog', 'patty', 'burger', 'meatball', 'nugget'],
+    'breast': ['thigh', 'leg', 'wing', 'drumstick'],
+    'white': ['brown', 'black', 'red', 'wild'],
+    'whole': ['skim', 'low fat', '2%', '1%'],
+  };
+  
+  for (const [queryTerm, conflictTerms] of Object.entries(specificConflicts)) {
+    if (queryTerms.includes(queryTerm)) {
+      for (const conflict of conflictTerms) {
+        if (nameLower.includes(conflict)) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
 }
 
 /**

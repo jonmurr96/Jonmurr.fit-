@@ -16,6 +16,58 @@ interface MealSlot {
   items: MealPlanItem[];
 }
 
+interface ServingAdjustment {
+  size: number;
+  unit: string;
+}
+
+// Unit conversion constants
+const GRAMS_PER_OZ = 28.3495;
+const GRAMS_PER_CUP = 240; // Approximate for most foods
+const GRAMS_PER_TBSP = 15; // Approximate
+
+// Convert any unit to grams
+function convertToGrams(amount: number, unit: string): number {
+  switch (unit.toLowerCase()) {
+    case 'g':
+    case 'grams':
+      return amount;
+    case 'oz':
+    case 'ounces':
+      return amount * GRAMS_PER_OZ;
+    case 'cup':
+    case 'cups':
+      return amount * GRAMS_PER_CUP;
+    case 'tbsp':
+    case 'tablespoon':
+    case 'tablespoons':
+      return amount * GRAMS_PER_TBSP;
+    default:
+      return amount; // Default to grams
+  }
+}
+
+// Convert grams to any unit
+function convertFromGrams(grams: number, unit: string): number {
+  switch (unit.toLowerCase()) {
+    case 'g':
+    case 'grams':
+      return grams;
+    case 'oz':
+    case 'ounces':
+      return grams / GRAMS_PER_OZ;
+    case 'cup':
+    case 'cups':
+      return grams / GRAMS_PER_CUP;
+    case 'tbsp':
+    case 'tablespoon':
+    case 'tablespoons':
+      return grams / GRAMS_PER_TBSP;
+    default:
+      return grams;
+  }
+}
+
 const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, onSave }) => {
   const { foodCatalogService } = useUserServices();
   const [catalogFoods, setCatalogFoods] = useState<CatalogFoodItem[]>([]);
@@ -33,6 +85,9 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   const [pendingUndoFoodIds, setPendingUndoFoodIds] = useState<number[]>([]);
   const pendingTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Serving size adjustments: keyed by "${source}:${id}"
+  const [servingSizeAdjustments, setServingSizeAdjustments] = useState<Record<string, ServingAdjustment>>({});
   
   const [meals, setMeals] = useState<MealSlot[]>([
     { name: 'Breakfast', items: [] },
@@ -106,23 +161,96 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   // Determine which foods to display
   const displayedFoods = showQuickPicks ? filteredQuickPicks : usdaFoods;
 
-  const addFoodToMeal = (mealIndex: number, food: CatalogFoodItem | SimplifiedFood, servings: number = 1) => {
-    const newMeals = [...meals];
+  // Cleanup serving size adjustments when displayed foods change
+  useEffect(() => {
+    const currentFoodKeys = new Set(
+      displayedFoods.map(food => {
+        const isUSDA = 'source' in food && food.source === 'usda';
+        return `${isUSDA ? 'usda' : 'catalog'}:${food.id}`;
+      })
+    );
     
-    // Handle both catalog and USDA foods
+    setServingSizeAdjustments(prev => {
+      const filtered: Record<string, ServingAdjustment> = {};
+      Object.keys(prev).forEach(key => {
+        if (currentFoodKeys.has(key)) {
+          filtered[key] = prev[key];
+        }
+      });
+      return filtered;
+    });
+  }, [displayedFoods]);
+
+  // Get or initialize serving adjustment for a food
+  const getServingAdjustment = (food: CatalogFoodItem | SimplifiedFood): ServingAdjustment => {
+    const isUSDA = 'source' in food && food.source === 'usda';
+    const key = `${isUSDA ? 'usda' : 'catalog'}:${food.id}`;
     const servingSize = ('serving_size' in food) ? food.serving_size : (food as SimplifiedFood).servingSize;
     const servingUnit = ('serving_unit' in food) ? food.serving_unit : (food as SimplifiedFood).servingUnit;
+    
+    return servingSizeAdjustments[key] || { size: servingSize, unit: servingUnit };
+  };
+
+  // Update serving adjustment
+  const updateServingAdjustment = (food: CatalogFoodItem | SimplifiedFood, size: number, unit: string) => {
+    const isUSDA = 'source' in food && food.source === 'usda';
+    const key = `${isUSDA ? 'usda' : 'catalog'}:${food.id}`;
+    
+    setServingSizeAdjustments(prev => ({
+      ...prev,
+      [key]: { size, unit }
+    }));
+  };
+
+  // Calculate adjusted macros based on custom serving size
+  const calculateAdjustedMacros = (food: CatalogFoodItem | SimplifiedFood, adjustment: ServingAdjustment) => {
+    const isUSDA = 'source' in food && food.source === 'usda';
+    
+    // Get base serving size and unit
+    const baseServingSize = ('serving_size' in food) ? food.serving_size : (food as SimplifiedFood).servingSize;
+    const baseServingUnit = ('serving_unit' in food) ? food.serving_unit : (food as SimplifiedFood).servingUnit;
+    
     const protein = ('protein_g' in food) ? food.protein_g : (food as SimplifiedFood).protein;
     const carbs = ('carbs_g' in food) ? food.carbs_g : (food as SimplifiedFood).carbs;
     const fat = ('fat_g' in food) ? food.fat_g : (food as SimplifiedFood).fat;
     
+    let ratio: number;
+    
+    if (isUSDA) {
+      // USDA foods: nutrition is always per 100g, allow unit conversion
+      const baseGrams = 100;
+      const userGrams = convertToGrams(adjustment.size, adjustment.unit);
+      ratio = userGrams / baseGrams;
+    } else {
+      // Catalog foods: nutrition is per native serving, only allow quantity change (no unit conversion)
+      // If user changed the unit, reset to native unit
+      if (adjustment.unit !== baseServingUnit) {
+        adjustment.unit = baseServingUnit;
+      }
+      ratio = adjustment.size / baseServingSize;
+    }
+    
+    return {
+      calories: Math.round(food.calories * ratio),
+      protein: Math.round(protein * ratio),
+      carbs: Math.round(carbs * ratio),
+      fat: Math.round(fat * ratio),
+      quantity: `${adjustment.size}${adjustment.unit}`
+    };
+  };
+
+  const addFoodToMeal = (mealIndex: number, food: CatalogFoodItem | SimplifiedFood) => {
+    const newMeals = [...meals];
+    const adjustment = getServingAdjustment(food);
+    const adjustedMacros = calculateAdjustedMacros(food, adjustment);
+    
     const mealItem: MealPlanItem = {
       food: food.name,
-      quantity: `${servingSize * servings}${servingUnit}`,
-      calories: food.calories * servings,
-      protein: protein * servings,
-      carbs: carbs * servings,
-      fat: fat * servings,
+      quantity: adjustedMacros.quantity,
+      calories: adjustedMacros.calories,
+      protein: adjustedMacros.protein,
+      carbs: adjustedMacros.carbs,
+      fat: adjustedMacros.fat,
       catalogFoodId: 'source' in food && food.source === 'usda' ? undefined : food.id,
     };
     newMeals[mealIndex].items.push(mealItem);
@@ -428,12 +556,9 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                 const isFavorite = favorites.includes(food.id);
                 const isUSDA = 'source' in food && food.source === 'usda';
                 
-                // Get macros safely
-                const protein = ('protein_g' in food) ? food.protein_g : (food as SimplifiedFood).protein;
-                const carbs = ('carbs_g' in food) ? food.carbs_g : (food as SimplifiedFood).carbs;
-                const fat = ('fat_g' in food) ? food.fat_g : (food as SimplifiedFood).fat;
-                const servingSize = ('serving_size' in food) ? food.serving_size : (food as SimplifiedFood).servingSize;
-                const servingUnit = ('serving_unit' in food) ? food.serving_unit : (food as SimplifiedFood).servingUnit;
+                // Get serving adjustment and adjusted macros
+                const adjustment = getServingAdjustment(food);
+                const adjustedMacros = calculateAdjustedMacros(food, adjustment);
                 
                 return (
                   <div
@@ -458,13 +583,46 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                         )}
                       </div>
                       <div className="space-y-1 text-left sm:text-right flex-shrink-0">
-                        <p className="text-sm font-semibold text-white">{Math.round(food.calories)} kcal</p>
+                        <p className="text-sm font-semibold text-white">{adjustedMacros.calories} kcal</p>
                         <p className="text-xs text-zinc-400 break-words">
-                          P: {Math.round(protein)}g · C: {Math.round(carbs)}g · F: {Math.round(fat)}g
+                          P: {adjustedMacros.protein}g · C: {adjustedMacros.carbs}g · F: {adjustedMacros.fat}g
                         </p>
                       </div>
                     </div>
-                    <p className="text-xs text-zinc-400 mb-3">{servingSize}{servingUnit}</p>
+                    
+                    {/* Serving Size Controls */}
+                    <div className="mb-3 flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={adjustment.size}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (!isNaN(value) && value > 0) {
+                            updateServingAdjustment(food, value, adjustment.unit);
+                          }
+                        }}
+                        className="w-20 bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                        min="0.1"
+                        step="0.1"
+                      />
+                      {isUSDA ? (
+                        <select
+                          value={adjustment.unit}
+                          onChange={(e) => updateServingAdjustment(food, adjustment.size, e.target.value)}
+                          className="bg-zinc-700 border border-zinc-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                          <option value="g">grams</option>
+                          <option value="oz">ounces</option>
+                          <option value="cup">cups</option>
+                          <option value="tbsp">tbsp</option>
+                        </select>
+                      ) : (
+                        <span className="px-2 py-1 text-sm text-zinc-400">{adjustment.unit}</span>
+                      )}
+                      <span className="text-xs text-zinc-500">
+                        {isUSDA && (adjustment.unit === 'cup' || adjustment.unit === 'tbsp') ? '(approx)' : ''}
+                      </span>
+                    </div>
                     
                     {/* Add to Meal Buttons */}
                     <div className="flex flex-wrap gap-1">
