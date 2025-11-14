@@ -45,6 +45,11 @@ The application features a modern, engaging design with a focus on gamification,
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
 ## Recent Changes
+### November 14, 2025 - Manual Meal Plan Builder React Fix
+- **Fixed Infinite Re-render Loop**: Wrapped `filteredQuickPicks` and `displayedFoods` in `useMemo` hooks to prevent recalculation on every render, eliminating "Maximum update depth exceeded" errors and duplicate Quick Add items.
+- **Root Cause**: The cleanup `useEffect` was triggering state updates based on `displayedFoods`, which was being recalculated on every render, creating an infinite loop.
+- **Impact**: Manual Meal Plan Builder now loads correctly without overlapping UI or duplicate food items. All Quick Add functionality (hide/unhide, favorites, search) working properly.
+
 ### November 14, 2025 - Search Accuracy & Serving Size Adjustments
 - **Enhanced Search Ranking Algorithm**: Implemented compound food detection with tiered penalties (-40 for medleys/mixes, -20 for "with"/"topped", -10 for "flavored"/"seasoned"). Added incompatible term filtering (-100 penalty) to exclude semantic mismatches (e.g., filters out "bratwurst" when searching "ground chicken"). Increased canonical food boost (+30) and data type priority (Foundation +30, SR Legacy +15) for more accurate search results.
 - **Serving Size Adjustment Feature**: Users can now adjust serving sizes before adding foods to meal plans. USDA foods support full unit conversion (grams/ounces/cups/tablespoons) with real-time macro recalculation. Catalog foods support quantity adjustment while maintaining native units (e.g., "serving", "scoop"). Split macro calculation logic ensures accuracy: USDA foods use 100g baseline, catalog foods use native serving size baseline.
