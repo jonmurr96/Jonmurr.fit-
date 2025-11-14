@@ -20,6 +20,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   const [catalogFoods, setCatalogFoods] = useState<CatalogFoodItem[]>([]);
   const [usdaFoods, setUsdaFoods] = useState<SimplifiedFood[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [blacklisted, setBlacklisted] = useState<number[]>([]);
   const [activeCategory, setActiveCategory] = useState<'protein' | 'carbs' | 'fats'>('protein');
   const [searchQuery, setSearchQuery] = useState('');
   const [planName, setPlanName] = useState('My Custom Plan');
@@ -27,6 +28,9 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   const [showQuickPicks, setShowQuickPicks] = useState(true);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [selectedMealForPhoto, setSelectedMealForPhoto] = useState<number | null>(null);
+  const [showHiddenFoods, setShowHiddenFoods] = useState(false);
+  const [pendingUndoFoodIds, setPendingUndoFoodIds] = useState<number[]>([]);
+  const pendingTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [meals, setMeals] = useState<MealSlot[]>([
@@ -47,6 +51,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
       const prefs = await foodCatalogService.getUserPreferences();
       if (prefs) {
         setFavorites(prefs.favorited_foods || []);
+        setBlacklisted(prefs.blacklisted_foods || []);
       }
     };
     
@@ -83,9 +88,13 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
     return () => clearTimeout(debounce);
   }, [searchQuery, activeCategory]);
 
-  // Quick picks (catalog foods)
+  // Quick picks (catalog foods) - filter based on showHiddenFoods toggle
   const filteredQuickPicks = catalogFoods
-    .filter(food => food.category === activeCategory)
+    .filter(food => {
+      if (food.category !== activeCategory) return false;
+      if (showHiddenFoods) return blacklisted.includes(food.id); // Show ONLY hidden
+      return !blacklisted.includes(food.id); // Show NOT hidden
+    })
     .sort((a, b) => {
       const aFav = favorites.includes(a.id);
       const bFav = favorites.includes(b.id);
@@ -184,6 +193,59 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
       }
     }
   };
+
+  const handleToggleHide = async (foodId: number, currentlyHidden: boolean) => {
+    if (currentlyHidden) {
+      // Cancel pending timeout if exists
+      const existingTimeout = pendingTimeoutsRef.current.get(foodId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        pendingTimeoutsRef.current.delete(foodId);
+        setPendingUndoFoodIds(prev => prev.filter(id => id !== foodId));
+      }
+      
+      // Unhide
+      await foodCatalogService.removeBlacklist(foodId);
+      setBlacklisted(prev => prev.filter(id => id !== foodId));
+    } else {
+      // Clear existing timeout for this food if any
+      const existingTimeout = pendingTimeoutsRef.current.get(foodId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      
+      // Hide with undo option
+      setBlacklisted(prev => [...prev, foodId]);
+      
+      // Show toast with undo (5 second window)
+      const timeoutId = setTimeout(async () => {
+        await foodCatalogService.addBlacklist(foodId);
+        pendingTimeoutsRef.current.delete(foodId);
+        setPendingUndoFoodIds(prev => prev.filter(id => id !== foodId));
+      }, 5000);
+      
+      pendingTimeoutsRef.current.set(foodId, timeoutId);
+      setPendingUndoFoodIds(prev => [...prev, foodId]);
+    }
+  };
+
+  const handleUndo = (foodId: number) => {
+    const timeoutId = pendingTimeoutsRef.current.get(foodId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      pendingTimeoutsRef.current.delete(foodId);
+      setBlacklisted(prev => prev.filter(id => id !== foodId));
+      setPendingUndoFoodIds(prev => prev.filter(id => id !== foodId));
+    }
+  };
+  
+  // Cleanup timeouts on unmount only
+  useEffect(() => {
+    return () => {
+      pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      pendingTimeoutsRef.current.clear();
+    };
+  }, []);
 
   const calculateTotalMacros = () => {
     let totalCalories = 0;
@@ -294,6 +356,21 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
             <div className="p-3 sm:p-4 border-b border-zinc-800">
               <h3 className="text-base sm:text-lg font-bold mb-3">Food Catalog</h3>
               
+              {/* Hidden Foods Toggle */}
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowHiddenFoods(!showHiddenFoods)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      showHiddenFoods ? 'bg-orange-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {showHiddenFoods ? '👁️ Viewing Hidden' : '🙈 Show Hidden'}
+                    {blacklisted.length > 0 && ` (${blacklisted.length})`}
+                  </button>
+                </div>
+              </div>
+              
               {/* Category Tabs */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {(['protein', 'carbs', 'fats'] as const).map(cat => (
@@ -368,6 +445,17 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                         <p className="font-bold text-white break-words">{food.name}</p>
                         {isFavorite && <span className="text-yellow-400 text-sm flex-shrink-0">⭐</span>}
                         {isUSDA && <span className="text-xs bg-blue-600 px-2 py-0.5 rounded text-white flex-shrink-0">USDA</span>}
+                        
+                        {/* Hide/Unhide Toggle - Only for catalog foods */}
+                        {!isUSDA && (
+                          <button
+                            onClick={() => handleToggleHide(food.id, blacklisted.includes(food.id))}
+                            className="text-zinc-400 hover:text-white transition-colors flex-shrink-0"
+                            title={blacklisted.includes(food.id) ? "Unhide from quick picks" : "Hide from quick picks"}
+                          >
+                            {blacklisted.includes(food.id) ? '👁️‍🗨️' : '👁️'}
+                          </button>
+                        )}
                       </div>
                       <div className="space-y-1 text-left sm:text-right flex-shrink-0">
                         <p className="text-sm font-semibold text-white">{Math.round(food.calories)} kcal</p>
@@ -516,6 +604,41 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
           onChange={handlePhotoUpload}
           className="hidden"
         />
+        
+        {/* Undo Toast - Shows all pending hides */}
+        {pendingUndoFoodIds.length > 0 && (
+          <div className="fixed bottom-4 right-4 bg-zinc-800 border border-zinc-700 rounded-lg p-4 shadow-lg z-50 max-w-xs">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-white">
+                {pendingUndoFoodIds.length} food{pendingUndoFoodIds.length > 1 ? 's' : ''} hidden
+              </p>
+              <button
+                onClick={() => {
+                  pendingUndoFoodIds.forEach(foodId => handleUndo(foodId));
+                }}
+                className="text-xs text-green-400 hover:text-green-300 underline"
+              >
+                Undo All
+              </button>
+            </div>
+            <div className="space-y-1">
+              {pendingUndoFoodIds.map(foodId => {
+                const food = catalogFoods.find(f => f.id === foodId);
+                return (
+                  <div key={foodId} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-zinc-400 truncate">{food?.name || `Food #${foodId}`}</span>
+                    <button
+                      onClick={() => handleUndo(foodId)}
+                      className="px-2 py-0.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex-shrink-0"
+                    >
+                      Undo
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
