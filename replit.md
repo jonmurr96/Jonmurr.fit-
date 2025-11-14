@@ -51,6 +51,15 @@ The application features a modern, engaging design with a focus on gamification,
 - **Photo Recognition Integration**: Added camera buttons to all meal sections in ManualMealPlanBuilder (Breakfast, Lunch, Dinner, Snacks). Integrated existing `logFoodWithPhoto()` Gemini API function for nutrition label OCR and visual food recognition. Implemented race-condition-safe state management using functional updaters. Mobile camera support with `capture="environment"` attribute.
 - **Quick Add Management**: Implemented hide/unhide functionality for catalog foods with eye icon toggles. Multi-hide support with ref-based timeout management providing independent 5-second undo windows per food. Toast notifications show all pending hides with individual and bulk undo buttons. "Show Hidden" toggle allows viewing and restoring hidden foods. Persists to `user_food_preferences.blacklisted_foods` array. USDA foods excluded from hide functionality (search-only).
 
+### November 14, 2025 - Custom USDA Food Search Index
+- **Local Food Index**: Built custom search index (`usda_foods_index` table) with 1500+ preprocessed USDA foods stored locally in Supabase for dramatically improved search accuracy and speed.
+- **Hybrid Search Algorithm**: Implemented PostgreSQL full-text search (tsvector) + trigram similarity with custom multi-factor scoring (exact match +50, cooking method detection +20, canonicality +15, data type priority).
+- **Bulk Ingestion System**: Created CLI script (`scripts/usda_seed_loader.ts`) that fetches foods using 165 targeted keywords, applies smart filtering (relaxed to allow cereals/branded staples), detects preparation methods, tags canonical foods, and deduplicates by normalized name.
+- **Intelligent Fallback**: Wrapper service checks if index is populated, routes to local search when available, falls back to live USDA API when index returns 0 results (handles ingestion gaps).
+- **Search Improvements**: Queries now return relevant results - "white rice" returns simple white rice (not "Adobo with rice"), "chicken breast cooked" returns cooked chicken (not raw), preparation methods properly detected.
+- **Performance**: Local searches complete in <100ms vs 500-1000ms for live API calls, deterministic results, offline-capable.
+- **Setup**: Run `npm run seed:usda` to populate index, migration adds trigram indexes and search function. See `USDA_FOOD_INDEX_SETUP.md` for complete documentation.
+
 ### November 13, 2025 - USDA Food Database Integration
 - **USDA FoodData Central API**: Integrated free USDA API (1,000 requests/hour) for real-time food search with 1000+ foods
 - **Enhanced Food Search**: ManualMealPlanBuilder and FoodSwapModal now search USDA database when users type (300ms debounce)

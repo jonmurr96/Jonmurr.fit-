@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useUserServices } from '../hooks/useUserServices';
 import { FoodItem as CatalogFoodItem } from '../services/database/foodCatalogService';
 import { GeneratedMealPlan, MealPlanItem } from '../types';
-import { searchUSDAFoods, convertToSimplifiedFood, SimplifiedFood } from '../services/usdaFoodService';
+import { searchUSDAFoods } from '../services/foodSearchWrapper';
+import { SimplifiedFood } from '../services/usdaFoodService';
 import { logFoodWithPhoto } from '../services/geminiService';
 
 interface ManualMealPlanBuilderProps {
@@ -72,12 +73,11 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
       
       try {
         const results = await searchUSDAFoods(searchQuery, 50);
-        const simplified = results.map(convertToSimplifiedFood);
-        const filtered = simplified.filter(food => food.category === activeCategory);
+        const filtered = results.filter(food => food.category === activeCategory);
         setUsdaFoods(filtered);
-        console.log('🔍 USDA search results:', filtered.length, 'foods');
+        console.log('🔍 Food search results:', filtered.length, 'foods');
       } catch (error) {
-        console.error('Error searching USDA:', error);
+        console.error('Error searching foods:', error);
         setUsdaFoods([]);
       } finally {
         setIsSearching(false);

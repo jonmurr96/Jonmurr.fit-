@@ -9,9 +9,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const USDA_API_KEY = process.env.VITE_USDA_API_KEY || '';
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
+// Node.js environment - use process.env without VITE_ prefix
+const USDA_API_KEY = process.env.USDA_API_KEY || process.env.VITE_USDA_API_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 const BASE_URL = 'https://api.nal.usda.gov/fdc/v1';
 
 // Initialize Supabase client
@@ -63,21 +64,26 @@ const SEED_KEYWORDS = {
   miscellaneous: [
     'honey', 'maple syrup', 'agave', 'dark chocolate', 'cocoa powder',
     'protein bar', 'rice cakes', 'hummus', 'salsa', 'guacamole'
+  ],
+  cereals: [
+    'captain crunch', 'cheerios', 'corn flakes', 'frosted flakes',
+    'raisin bran', 'special k', 'lucky charms', 'fruit loops',
+    'granola', 'muesli', 'bran flakes', 'rice krispies',
+    'cinnamon toast crunch', 'honey bunches of oats', 'grape nuts'
   ]
 };
 
 /**
  * Hard ban keywords - completely filter out these results
+ * Note: Relaxed from original to allow branded staples (cereals, protein bars, etc.)
  */
 const HARD_BAN_KEYWORDS = [
   'babyfood', 'baby food', 'infant', 'toddler', 'formula',
-  'snack', 'cracker', 'chip', 'candy', 'dessert', 'pastry', 'cookie', 'brownie', 'muffin', 'cake', 'pie',
-  'flour', 'starch', 'mix', 'batter', 'breaded', 'coating', 'breading',
-  'soup', 'broth', 'gravy', 'sauce', 'dressing', 'marinade', 'syrup',
-  'supplement', 'beverage', 'cocktail', 'smoothie', 'powder', 'shake', 'pudding',
-  'pickled', 'preserved', 'dehydrated', 'sweetened',
-  'microwave', 'entree', 'meal', 'kit',
-  'cereal', 'tortilla', 'wrap', 'noodle', 'ramen', 'pizza', 'waffle', 'pancake', 'biscuit'
+  'flour', 'starch', 'batter', 'coating', 'breading',
+  'soup', 'broth', 'gravy', 'sauce', 'dressing', 'marinade',
+  'supplement', 'cocktail',
+  'pickled', 'preserved',
+  'microwave', 'entree', 'kit'
 ];
 
 /**

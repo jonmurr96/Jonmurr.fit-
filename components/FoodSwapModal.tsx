@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FoodItem } from '../services/database/foodCatalogService';
 import { MealPlanItem } from '../types';
-import { searchUSDAFoods, convertToSimplifiedFood, convertSimplifiedToFoodItem, SimplifiedFood } from '../services/usdaFoodService';
+import { searchUSDAFoods } from '../services/foodSearchWrapper';
+import { convertSimplifiedToFoodItem, SimplifiedFood } from '../services/usdaFoodService';
 
 interface FoodSwapModalProps {
   isOpen: boolean;
@@ -59,12 +60,11 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
       
       try {
         const results = await searchUSDAFoods(searchQuery, 50);
-        const simplified = results.map(convertToSimplifiedFood);
-        const filtered = simplified.filter(food => food.category === category);
+        const filtered = results.filter(food => food.category === category);
         setUsdaFoods(filtered);
-        console.log('🔍 USDA swap search results:', filtered.length, 'foods');
+        console.log('🔍 Food swap search results:', filtered.length, 'foods');
       } catch (error) {
-        console.error('Error searching USDA for swaps:', error);
+        console.error('Error searching foods for swaps:', error);
         setUsdaFoods([]);
       } finally {
         setIsSearching(false);

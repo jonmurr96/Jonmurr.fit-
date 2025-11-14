@@ -2,6 +2,7 @@
 -- Creates a local search index for USDA foods with full-text and trigram search
 
 -- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- USDA Foods Index Table

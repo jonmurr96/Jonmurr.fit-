@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:usda": "tsx scripts/usda_seed_loader.ts"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
