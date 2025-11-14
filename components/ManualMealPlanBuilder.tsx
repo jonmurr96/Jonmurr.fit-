@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUserServices } from '../hooks/useUserServices';
 import { FoodItem as CatalogFoodItem } from '../services/database/foodCatalogService';
 import { GeneratedMealPlan, MealPlanItem } from '../types';
 import { searchUSDAFoods, convertToSimplifiedFood, SimplifiedFood } from '../services/usdaFoodService';
+import { logFoodWithPhoto } from '../services/geminiService';
 
 interface ManualMealPlanBuilderProps {
   onClose: () => void;
@@ -24,6 +25,9 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   const [planName, setPlanName] = useState('My Custom Plan');
   const [isSearching, setIsSearching] = useState(false);
   const [showQuickPicks, setShowQuickPicks] = useState(true);
+  const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
+  const [selectedMealForPhoto, setSelectedMealForPhoto] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [meals, setMeals] = useState<MealSlot[]>([
     { name: 'Breakfast', items: [] },
@@ -137,6 +141,47 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
         fat: catalogFood.fat_g * servings,
       };
       setMeals(newMeals);
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const mealIndex = selectedMealForPhoto;
+    if (mealIndex === null) return;
+    
+    setIsAnalyzingPhoto(true);
+    try {
+      const foodItems = await logFoodWithPhoto(file);
+      
+      if (foodItems.length > 0) {
+        // Use functional state updater to avoid race conditions with concurrent edits
+        setMeals(currentMeals => {
+          const newMeals = [...currentMeals];
+          foodItems.forEach(item => {
+            const mealItem: MealPlanItem = {
+              food: item.name,
+              quantity: `${item.quantity} ${item.unit}`,
+              calories: item.calories,
+              protein: item.protein,
+              carbs: item.carbs,
+              fat: item.fat,
+            };
+            newMeals[mealIndex].items.push(mealItem);
+          });
+          return newMeals;
+        });
+      }
+      setSelectedMealForPhoto(null);
+    } catch (error) {
+      console.error('Error analyzing photo:', error);
+      alert('Failed to analyze photo. Please try again.');
+    } finally {
+      setIsAnalyzingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -372,6 +417,29 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                 <div key={mealIdx} className="bg-zinc-800 rounded-lg p-4">
                   <h4 className="font-bold text-white mb-3">{meal.name}</h4>
                   
+                  <div className="mb-3">
+                    <button
+                      onClick={() => {
+                        setSelectedMealForPhoto(mealIdx);
+                        fileInputRef.current?.click();
+                      }}
+                      disabled={isAnalyzingPhoto}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                    >
+                      {isAnalyzingPhoto && selectedMealForPhoto === mealIdx ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          Analyzing photo...
+                        </>
+                      ) : (
+                        <>
+                          <span>📸</span>
+                          Add food from photo
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  
                   {meal.items.length === 0 ? (
                     <p className="text-sm text-zinc-500 italic">No items yet</p>
                   ) : (
@@ -439,6 +507,15 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
             </button>
           </div>
         </div>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhotoUpload}
+          className="hidden"
+        />
       </div>
     </div>
   );
