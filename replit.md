@@ -45,10 +45,12 @@ The application features a modern, engaging design with a focus on gamification,
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
 ## Recent Changes
-### November 14, 2025 - Manual Meal Plan Builder React Fix
+### November 14, 2025 - Manual Meal Plan Builder Complete Fix
 - **Fixed Infinite Re-render Loop**: Wrapped `filteredQuickPicks` and `displayedFoods` in `useMemo` hooks to prevent recalculation on every render, eliminating "Maximum update depth exceeded" errors and duplicate Quick Add items.
-- **Root Cause**: The cleanup `useEffect` was triggering state updates based on `displayedFoods`, which was being recalculated on every render, creating an infinite loop.
-- **Impact**: Manual Meal Plan Builder now loads correctly without overlapping UI or duplicate food items. All Quick Add functionality (hide/unhide, favorites, search) working properly.
+- **Fixed Missing Database Tables**: Applied `migration_food_catalog.sql` to create `food_catalog` and `user_food_preferences` tables that were missing from the development database.
+- **Seeded Food Catalog**: Inserted 60 curated foods (20 protein sources, 20 carb sources, 20 fat sources) into the database for Quick Add functionality.
+- **Root Causes**: (1) The cleanup `useEffect` was triggering state updates based on `displayedFoods`, which was being recalculated on every render, creating an infinite loop. (2) Database tables weren't created, causing "table not found" errors and empty Quick Add section.
+- **Impact**: Manual Meal Plan Builder now loads correctly with all 60 Quick Add foods displayed. No more overlapping UI, duplicate items, or database errors. All Quick Add functionality (hide/unhide, favorites, search) working properly.
 
 ### November 14, 2025 - Search Accuracy & Serving Size Adjustments
 - **Enhanced Search Ranking Algorithm**: Implemented compound food detection with tiered penalties (-40 for medleys/mixes, -20 for "with"/"topped", -10 for "flavored"/"seasoned"). Added incompatible term filtering (-100 penalty) to exclude semantic mismatches (e.g., filters out "bratwurst" when searching "ground chicken"). Increased canonical food boost (+30) and data type priority (Foundation +30, SR Legacy +15) for more accurate search results.
