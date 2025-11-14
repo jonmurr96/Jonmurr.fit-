@@ -96,16 +96,28 @@ const DESCRIPTOR_WORDS = [
 
 /**
  * Normalize and tokenize description for filtering
+ * Preserves comma positions for headword detection
  */
-function normalizeDescription(description: string): { tokens: string[], normalized: string } {
+function normalizeDescription(description: string): { tokens: string[], normalized: string, commaPositions: number[] } {
   const normalized = description.toLowerCase()
     .replace(/[^a-z0-9\s,]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   
+  // Track comma positions before splitting
+  const commaPositions: number[] = [];
+  let currentPos = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    if (normalized[i] === ',') {
+      commaPositions.push(currentPos);
+    } else if (normalized[i] !== ' ') {
+      currentPos++;
+    }
+  }
+  
   const tokens = normalized.split(/[\s,]+/).filter(t => t.length > 0);
   
-  return { tokens, normalized };
+  return { tokens, normalized: normalized.replace(/,/g, ' '), commaPositions };
 }
 
 /**
@@ -159,15 +171,26 @@ function calculateRelevanceScore(description: string, query: string, dataType: s
   score += matchingTerms * 5;
   
   // === HEADWORD ALIGNMENT ===
-  // Extract head keyword from query (strip descriptors)
-  const headKeyword = queryTerms.find(term => !DESCRIPTOR_WORDS.includes(term)) || queryTerms[0];
+  // Extract head keyword from query - prefer nouns (last non-descriptor term)
+  // e.g., "brown rice" → "rice", "ground chicken breast" → "breast" or "chicken"
+  const nonDescriptorTerms = queryTerms.filter(term => !DESCRIPTOR_WORDS.includes(term));
+  const headKeyword = nonDescriptorTerms[nonDescriptorTerms.length - 1] || queryTerms[queryTerms.length - 1];
   
   // First token matches head keyword = +30
   if (tokens[0] === headKeyword) {
     score += 30;
   }
-  // First token after comma matches = +15
-  else if (tokens.some((token, i) => i > 0 && tokens[i-1] === '' && token === headKeyword)) {
+  // Head keyword in first 3 tokens = +20
+  else if (tokens.slice(0, 3).includes(headKeyword)) {
+    score += 20;
+  }
+  // Parse description segments by comma and check if head keyword starts any segment
+  const descSegments = descLower.split(',').map(s => s.trim());
+  const headwordStartsSegment = descSegments.some((seg, i) => {
+    const firstWord = seg.split(/\s+/)[0];
+    return i > 0 && firstWord === headKeyword;
+  });
+  if (headwordStartsSegment) {
     score += 15;
   }
   
@@ -265,7 +288,8 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
   try {
     // Increase page size to get more results for filtering
     const fetchSize = Math.min(pageSize * 3, 200);
-    const url = `${BASE_URL}/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=${fetchSize}&dataType=Foundation,SR%20Legacy`;
+    // Include all data types (Foundation, SR Legacy, Branded) - scoring will prioritize canonical entries
+    const url = `${BASE_URL}/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=${fetchSize}`;
     
     const response = await fetch(url);
     
