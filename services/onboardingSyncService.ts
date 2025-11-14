@@ -196,7 +196,8 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
           targetFat: trainingDayFat,
         };
         
-        console.log('🍽️ Generating meal plan with TRAINING DAY macros:', {
+        console.log('🍽️ Meal preferences prepared:', JSON.stringify(mealPreferences, null, 2));
+        console.log('⏳ Calling generateMealPlan with TRAINING DAY macros:', {
           calories: trainingDayCalories,
           protein: trainingDayProtein,
           carbs: trainingDayCarbs,
@@ -206,11 +207,14 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
         const generatedMealPlan = await generateMealPlan(mealPreferences);
         
         if (generatedMealPlan) {
+          console.log('💾 Saving meal plan to database...');
           await mealPlanService.saveMealPlan(generatedMealPlan, true); // Save meal plan as active (matches workout flow)
           console.log('✅ Meal plan generated and set as active:', generatedMealPlan.planName);
           return true;
+        } else {
+          console.error('❌ generateMealPlan returned null - check Gemini API errors above');
+          return false;
         }
-        return false;
       })(),
     ]);
 
@@ -228,10 +232,19 @@ export async function syncOnboardingToApp(userId: string): Promise<OnboardingSyn
       console.error('Full error:', JSON.stringify(workoutResult.reason, null, 2));
     }
 
-    if (mealResult.status === 'fulfilled' && mealResult.value) {
-      result.synced.mealPlan = true;
+    console.log('📊 Meal plan generation result status:', mealResult.status);
+    if (mealResult.status === 'fulfilled') {
+      console.log('✅ Meal plan promise fulfilled. Value:', mealResult.value);
+      if (mealResult.value) {
+        result.synced.mealPlan = true;
+      } else {
+        console.error('⚠️ Meal plan generation completed but returned false (null plan)');
+        console.error('💡 This usually means: 1) Missing Gemini API key, 2) API rate limit, or 3) JSON parsing error');
+        console.error('🔍 Check the error logs above for "generateMealPlan" to see the specific issue');
+      }
     } else if (mealResult.status === 'rejected') {
-      console.error('❌ Error generating meal plan:', mealResult.reason);
+      console.error('❌ Meal plan generation promise rejected:', mealResult.reason);
+      console.error('Full error:', JSON.stringify(mealResult.reason, null, 2));
     }
 
     // Mark sync as successful if core data (macros and weight) synced
