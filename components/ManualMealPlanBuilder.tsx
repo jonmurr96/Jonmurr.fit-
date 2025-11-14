@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useUserServices } from '../hooks/useUserServices';
 import { FoodItem as CatalogFoodItem } from '../services/database/foodCatalogService';
 import { GeneratedMealPlan, MealPlanItem } from '../types';
@@ -144,22 +144,26 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   }, [searchQuery, activeCategory]);
 
   // Quick picks (catalog foods) - filter based on showHiddenFoods toggle
-  const filteredQuickPicks = catalogFoods
-    .filter(food => {
-      if (food.category !== activeCategory) return false;
-      if (showHiddenFoods) return blacklisted.includes(food.id); // Show ONLY hidden
-      return !blacklisted.includes(food.id); // Show NOT hidden
-    })
-    .sort((a, b) => {
-      const aFav = favorites.includes(a.id);
-      const bFav = favorites.includes(b.id);
-      if (aFav && !bFav) return -1;
-      if (!aFav && bFav) return 1;
-      return a.name.localeCompare(b.name);
-    });
+  const filteredQuickPicks = useMemo(() => {
+    return catalogFoods
+      .filter(food => {
+        if (food.category !== activeCategory) return false;
+        if (showHiddenFoods) return blacklisted.includes(food.id); // Show ONLY hidden
+        return !blacklisted.includes(food.id); // Show NOT hidden
+      })
+      .sort((a, b) => {
+        const aFav = favorites.includes(a.id);
+        const bFav = favorites.includes(b.id);
+        if (aFav && !bFav) return -1;
+        if (!aFav && bFav) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [catalogFoods, activeCategory, showHiddenFoods, blacklisted, favorites]);
 
   // Determine which foods to display
-  const displayedFoods = showQuickPicks ? filteredQuickPicks : usdaFoods;
+  const displayedFoods = useMemo(() => {
+    return showQuickPicks ? filteredQuickPicks : usdaFoods;
+  }, [showQuickPicks, filteredQuickPicks, usdaFoods]);
 
   // Cleanup serving size adjustments when displayed foods change
   useEffect(() => {
