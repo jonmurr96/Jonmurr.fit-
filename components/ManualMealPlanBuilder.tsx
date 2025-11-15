@@ -6,6 +6,23 @@ import { searchUSDAFoods } from '../services/foodSearchWrapper';
 import { SimplifiedFood } from '../services/usdaFoodService';
 import { logFoodWithPhoto } from '../services/geminiService';
 
+// Media query hook for responsive layout
+const useMediaQuery = (query: string): boolean => {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+
+  return matches;
+};
+
 interface ManualMealPlanBuilderProps {
   onClose: () => void;
   onSave: (plan: GeneratedMealPlan) => void;
@@ -18,6 +35,8 @@ interface MealSlot {
 
 const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, onSave }) => {
   const { foodCatalogService } = useUserServices();
+  const isDesktop = useMediaQuery('(min-width: 1024px)'); // lg breakpoint
+  const [mobileTab, setMobileTab] = useState<'catalog' | 'plan'>('catalog');
   const [catalogFoods, setCatalogFoods] = useState<CatalogFoodItem[]>([]);
   const [usdaFoods, setUsdaFoods] = useState<SimplifiedFood[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
@@ -303,11 +322,11 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 sm:px-0">
-      <div className="bg-zinc-900 text-white rounded-2xl p-4 sm:p-6 w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col border border-zinc-800 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-zinc-900 text-white w-full h-full sm:h-auto sm:rounded-2xl p-4 sm:p-6 sm:max-w-7xl sm:max-h-[95vh] overflow-hidden flex flex-col border-0 sm:border border-zinc-800 shadow-2xl">
         
-        {/* Header */}
-        <div className="pb-4 sm:pb-6 border-b border-zinc-800 space-y-4">
+        {/* Header - Always Visible */}
+        <div className="flex-shrink-0 pb-4 sm:pb-6 border-b border-zinc-800 space-y-4">
           <div className="flex justify-between items-center">
             <div className="flex-1 min-w-0 mr-4">
               <input
@@ -350,11 +369,46 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
-          {/* Food Catalog Browser */}
-          <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-zinc-800 flex flex-col min-h-0">
-            <div className="p-3 sm:p-4 border-b border-zinc-800">
-              <h3 className="text-base sm:text-lg font-bold mb-3">Food Catalog</h3>
+        {/* Mobile Tab Switcher - Only on Mobile */}
+        {!isDesktop && (
+          <div className="flex-shrink-0 flex gap-2 pt-4 border-b border-zinc-800 pb-4">
+            <button
+              onClick={() => setMobileTab('catalog')}
+              className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all ${
+                mobileTab === 'catalog'
+                  ? 'bg-green-500 text-black'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              🔍 Browse Foods
+            </button>
+            <button
+              onClick={() => setMobileTab('plan')}
+              className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                mobileTab === 'plan'
+                  ? 'bg-green-500 text-black'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              }`}
+            >
+              📝 Your Plan
+              {totalItems > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  mobileTab === 'plan' ? 'bg-black text-green-400' : 'bg-green-500 text-black'
+                }`}>
+                  {totalItems}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Body - Responsive Grid Layout */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden">
+          {/* Food Catalog Browser - Show on desktop OR when mobile tab is 'catalog' */}
+          {(isDesktop || mobileTab === 'catalog') && (
+            <div className="w-full border-b lg:border-b-0 lg:border-r border-zinc-800 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-shrink-0 p-3 sm:p-4 border-b border-zinc-800">
+                <h3 className="text-base sm:text-lg font-bold mb-3">Food Catalog</h3>
               
               {/* Hidden Foods Toggle */}
               <div className="mb-3 flex items-center justify-between">
@@ -491,10 +545,12 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                 </div>
               )}
             </div>
-          </div>
+            </div>
+          )}
 
-          {/* Meal Builder */}
-          <div className="w-full lg:w-1/2 flex flex-col min-h-0 mt-4 lg:mt-0">
+          {/* Meal Builder - Show on desktop OR when mobile tab is 'plan' */}
+          {(isDesktop || mobileTab === 'plan') && (
+            <div className="w-full flex flex-col min-h-0 overflow-hidden">
             <div className="p-4 border-b border-zinc-800">
               <h3 className="text-lg font-bold">Your Meal Plan</h3>
               <p className="text-sm text-zinc-400">{totalItems} items added</p>
@@ -569,11 +625,12 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                 </div>
               ))}
             </div>
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-zinc-800 flex justify-between items-center">
+        {/* Footer - Always Visible */}
+        <div className="flex-shrink-0 p-4 sm:p-6 border-t border-zinc-800 flex flex-col sm:flex-row justify-between items-center gap-3">
           <div>
             <p className="text-sm text-zinc-400">
               {totalItems === 0 ? 'Add foods to get started' : `${totalItems} items · ${Math.round(macros.totalCalories)} total kcal`}
