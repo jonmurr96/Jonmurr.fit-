@@ -1,0 +1,169 @@
+# Jonmurr.fit UI Fixes - Detailed Instructions
+
+## Issue 1: Duplicate Quick Add Items
+
+### Problem
+Each meal from the meal plan appears twice in the Quick Add section (Protein Shake, Chicken & Rice, Greek Yogurt Bowl, Scrambled Eggs all duplicated).
+
+### Root Cause
+The Quick Add component is likely rendering the meal plan items twice, either due to:
+- Duplicate data being passed as props
+- The map function iterating over duplicated data
+- The component rendering twice due to React state issues
+
+### Fix for LogScreen.tsx
+
+Search for the "Quick Add" section in `screens/LogScreen.tsx`. You'll find code that looks something like this:
+
+```tsx
+{quickAddMeals.map((meal, index) => (
+  <div key={index}>
+    {/* meal card */}
+  </div>
+))}
+```
+
+**The fix depends on what's causing the duplication:**
+
+**Option A: If data is duplicated in the source**
+```tsx
+// Add deduplication before rendering
+const uniqueQuickAddMeals = React.useMemo(() => {
+  const seen = new Set();
+  return quickAddMeals.filter(meal => {
+    const key = `${meal.name}-${meal.calories}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}, [quickAddMeals]);
+
+// Then use uniqueQuickAddMeals in the map
+{uniqueQuickAddMeals.map((meal, index) => (
+  // ...
+))}
+```
+
+**Option B: If the component is rendering twice**
+Check if there are two separate map calls rendering the same data. Search for patterns like:
+- Two `.map()` calls on the same meal plan data
+- The Quick Add section being rendered in two different places
+
+**Option C: If using generated meal plan**
+If the Quick Add is pulling from `generatedMealPlan`, check if meals are being added twice during the generation process.
+
+---
+
+## Issue 2: Overlapping Interface in Meal Plan Generator
+
+### Problem
+In the manual meal plan generator (MealPlanEditor.tsx), the "Your Meal Plan" section overlaps with the "Food Catalog" section above it, creating a cluttered UI.
+
+### Root Cause
+CSS layout issues - likely missing margins, incorrect z-index, or absolute positioning causing overlap.
+
+### Fix for MealPlanEditor.tsx
+
+Open `screens/MealPlanEditor.tsx` and look for the layout structure. You'll see something like:
+
+```tsx
+<div className="meal-plan-editor">
+  <div className="food-catalog-section">
+    {/* Food Catalog */}
+  </div>
+  <div className="your-meal-plan-section">
+    {/* Your Meal Plan */}
+  </div>
+</div>
+```
+
+**CSS Fixes to apply:**
+
+1. **Add proper spacing between sections:**
+```tsx
+<div className="food-catalog-section" style={{ marginBottom: '24px' }}>
+  {/* Food Catalog */}
+</div>
+```
+
+2. **Ensure Your Meal Plan section doesn't have absolute positioning:**
+```tsx
+<div className="your-meal-plan-section" style={{ 
+  position: 'relative',  // or 'static', not 'absolute'
+  marginTop: '16px',
+  zIndex: 1 
+}}>
+  {/* Your Meal Plan */}
+</div>
+```
+
+3. **If using flexbox, ensure proper flex direction:**
+```tsx
+<div className="meal-plan-editor" style={{
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '20px',  // This adds space between flex children
+  padding: '16px'
+}}>
+```
+
+4. **Check for any fixed heights that might be causing overflow:**
+Look for styles like `height: 100vh` or `maxHeight` that might be constraining the container and causing overlap.
+
+---
+
+## Quick Implementation via Replit Agent
+
+If you want to use the Replit Agent, paste this prompt:
+
+```
+Fix two UI bugs in the Jonmurr.fit app:
+
+1. DUPLICATE QUICK ADD ITEMS:
+In screens/LogScreen.tsx, the Quick Add section shows duplicate meal items. Find where quickAddMeals or similar meal data is being mapped/rendered and deduplicate it. The issue is likely:
+- Data being rendered twice in separate map calls
+- Duplicate data in the source array
+Add a useMemo hook to deduplicate meals by name and calories before rendering.
+
+2. OVERLAPPING MEAL PLAN INTERFACE:
+In screens/MealPlanEditor.tsx, the "Your Meal Plan" section overlaps with the "Food Catalog" section. Fix the layout by:
+- Adding marginBottom: 24px to the Food Catalog section
+- Ensuring Your Meal Plan section uses position: relative (not absolute)
+- Adding proper spacing/gap between sections
+- Check if the parent container uses flexbox with flexDirection: column and gap
+
+Test both fixes to ensure the UI is clean and functional.
+```
+
+---
+
+## Testing
+
+After applying the fixes:
+
+1. **Test Quick Add:**
+   - Log in to the app
+   - Navigate to the Log screen
+   - Check that each meal appears only once in Quick Add
+   - Verify you can still add meals correctly
+
+2. **Test Meal Plan Editor:**
+   - Open the manual meal plan generator
+   - Verify Food Catalog and Your Meal Plan sections don't overlap
+   - Check that there's proper spacing between sections
+   - Ensure both sections are fully visible and usable
+
+---
+
+## Alternative: Direct Code Changes
+
+If you prefer to make the changes yourself:
+
+1. Open `screens/LogScreen.tsx` in Replit
+2. Search for "Quick Add" or "quickAddMeals"
+3. Add the deduplication logic before the map function
+4. Open `screens/MealPlanEditor.tsx`
+5. Find the layout sections and add the CSS fixes inline or in the stylesheet
+6. Save and test
+
+Let me know if you need any clarification on these fixes!

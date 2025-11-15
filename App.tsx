@@ -233,13 +233,37 @@ const App: React.FC = () => {
                 const allWaterLogs = await progressService.getAllWaterLogs();
                 setWaterLogs(allWaterLogs);
 
-                const quickMeals = await mealService.getQuickAddMeals();
-                if (quickMeals.length > 0) {
-                    setQuickAddMeals(quickMeals);
-                } else {
-                    for (const meal of INITIAL_QUICK_ADD_MEALS) {
-                        await mealService.addQuickAddMeal(meal.name, meal.items);
+                // Load Quick Add meals with proper error handling
+                try {
+                    const quickMeals = await mealService.getQuickAddMeals();
+                    
+                    if (quickMeals.length > 0) {
+                        // Deduplicate by meal name (defensive measure against legacy duplicates)
+                        const uniqueMeals = Array.from(
+                            new Map(quickMeals.map(m => [m.name.toLowerCase(), m])).values()
+                        );
+                        
+                        if (uniqueMeals.length < quickMeals.length) {
+                            console.warn(`⚠️ Found ${quickMeals.length - uniqueMeals.length} duplicate Quick Add meals - deduplicating`);
+                        }
+                        
+                        console.log(`📦 Loaded ${uniqueMeals.length} unique Quick Add meals`);
+                        setQuickAddMeals(uniqueMeals);
+                    } else {
+                        // Database returned zero rows - seed initial meals
+                        console.log('📦 No Quick Add meals found - seeding initial meals');
+                        for (const meal of INITIAL_QUICK_ADD_MEALS) {
+                            await mealService.addQuickAddMeal(meal.name, meal.items);
+                        }
+                        // Reload after seeding
+                        const seededMeals = await mealService.getQuickAddMeals();
+                        setQuickAddMeals(seededMeals);
                     }
+                } catch (quickMealsError) {
+                    // Error fetching/seeding - log but don't crash app
+                    console.error('❌ Error loading Quick Add meals:', quickMealsError);
+                    // Keep existing Quick Add meals from sticky state (fallback)
+                    console.log('Using cached Quick Add meals from local storage');
                 }
 
                 const activePlan = await mealPlanService.getActiveMealPlan();

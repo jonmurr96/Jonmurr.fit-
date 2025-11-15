@@ -195,7 +195,7 @@ export const createMealService = (userId: string): MealService => {
 
     if (error) {
       console.error('Error fetching quick add meals:', error);
-      return [];
+      throw error; // Surface error to caller instead of returning empty array
     }
 
     return (data || []).map((meal: any) => ({
