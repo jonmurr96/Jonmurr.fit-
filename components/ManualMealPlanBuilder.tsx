@@ -494,7 +494,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
           </div>
 
           {/* Meal Builder */}
-          <div className="w-full lg:w-1/2 flex flex-col min-h-0">
+          <div className="w-full lg:w-1/2 flex flex-col min-h-0 mt-4 lg:mt-0">
             <div className="p-4 border-b border-zinc-800">
               <h3 className="text-lg font-bold">Your Meal Plan</h3>
               <p className="text-sm text-zinc-400">{totalItems} items added</p>
