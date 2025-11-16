@@ -46,6 +46,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   const [planName, setPlanName] = useState('My Custom Plan');
   const [isSearching, setIsSearching] = useState(false);
   const [showQuickPicks, setShowQuickPicks] = useState(true);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [selectedMealForPhoto, setSelectedMealForPhoto] = useState<number | null>(null);
   const [showHiddenFoods, setShowHiddenFoods] = useState(false);
@@ -89,14 +90,18 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
 
       setIsSearching(true);
       setShowQuickPicks(false);
+      setSearchError(null);
       
       try {
         const results = await searchUSDAFoods(searchQuery, 50);
         const filtered = results.filter(food => food.category === activeCategory);
         setUsdaFoods(filtered);
+        setSearchError(null);
         console.log('🔍 Food search results:', filtered.length, 'foods');
       } catch (error) {
         console.error('Error searching foods:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to search foods. Please try again.';
+        setSearchError(errorMessage);
         setUsdaFoods([]);
       } finally {
         setIsSearching(false);
@@ -470,7 +475,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
             </div>
 
             {/* Food List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               {isSearching && (
                 <div className="text-center py-8">
                   <div className="inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
@@ -536,7 +541,19 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
                 );
               })}
               
-              {!isSearching && displayedFoods.length === 0 && (
+              {searchError && !isSearching && (
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-semibold">{searchError}</p>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-3">Try a different search term or browse quick picks instead.</p>
+                </div>
+              )}
+              
+              {!isSearching && !searchError && displayedFoods.length === 0 && (
                 <div className="text-center py-8 text-zinc-500">
                   <p>{showQuickPicks ? 'No foods in this category' : 'No foods found. Try a different search.'}</p>
                   {!showQuickPicks && (
@@ -556,7 +573,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
               <p className="text-sm text-zinc-400">{totalItems} items added</p>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               {meals.map((meal, mealIdx) => (
                 <div key={mealIdx} className="bg-zinc-800 rounded-lg p-4">
                   <h4 className="font-bold text-white mb-3">{meal.name}</h4>
