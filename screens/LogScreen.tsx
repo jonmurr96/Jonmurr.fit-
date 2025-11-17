@@ -7,7 +7,7 @@ import MealPlannerWizard from './MealPlannerWizard';
 import MealPlanView from './MealPlanView';
 import ActiveMealPlanWidget from '../components/ActiveMealPlanWidget';
 import MealPlanEditor from './MealPlanEditor';
-import ManualMealPlanBuilder from '../components/ManualMealPlanBuilder';
+import { ManualMealPlanBuilderV2 as ManualMealPlanBuilder } from '../components/ManualMealPlanBuilderV2';
 
 declare global {
   interface Window {
