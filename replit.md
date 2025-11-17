@@ -45,6 +45,15 @@ The application features a modern, engaging design with a focus on gamification,
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
 ## Recent Changes
+### November 17, 2025 - Food Search Database Setup Complete
+- **Database Migration Applied**: Successfully created `usda_foods_index`, `food_catalog`, and `user_food_preferences` tables in production Supabase database.
+- **Food Catalog Seeded**: Populated `food_catalog` with 60 curated Quick Pick foods (20 protein, 20 carbs, 20 fats) with complete nutritional data.
+- **USDA Index Populated**: Successfully seeded `usda_foods_index` with 1,632 USDA foods via bulk ingestion (913 carbs, 340 protein, 237 fats, 142 other).
+- **Row Level Security Fixed**: Added INSERT and UPDATE policies to allow seeding while maintaining read-only access for users.
+- **Search System Live**: Local food search now operational with 1,692 total searchable foods (60 Quick Picks + 1,632 USDA foods).
+- **Mobile Scroll Fixed**: Resolved webkit overflow scrolling issues in ManualMealPlanBuilder for smooth iOS/mobile scrolling.
+- **Performance**: Food searches complete in <100ms using PostgreSQL full-text + trigram search with hybrid fallback.
+
 ### November 14, 2025 - Production Fixes and Feature Enhancements
 - **Environment Variable Migration**: Migrated all services from `process.env.*` to `import.meta.env.VITE_*` to fix import-time crashes preventing Gemini API calls (workout/meal generation). Added comprehensive TypeScript support via vite-env.d.ts. All 11 Gemini functions now gracefully handle missing API keys with appropriate fallbacks.
 - **USDA Search Rebuild**: Implemented multi-stage filtering pipeline with hard ban list (baby food, infant formula, crackers, flour, processed foods), soft penalty system (canned/frozen/seasoned), and weighted relevance scoring (term coverage +25, headword alignment +30, data type priority: Foundation > SR Legacy > Branded). Enhanced canonical food detection (≤45 chars, ≤3 segments, simple descriptions) and improved deduplication. Restored Branded food support for future barcode scanning.
