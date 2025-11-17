@@ -45,6 +45,14 @@ The application features a modern, engaging design with a focus on gamification,
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
 ## Recent Changes
+### November 17, 2025 - Manual Meal Plan Builder UI/UX Redesign Complete
+- **Modular Component Architecture**: Created 4 reusable components (MacroSummaryCard, FoodCard, SearchBar, PlanPreview) for better maintainability and code organization.
+- **ManualMealPlanBuilderV2**: Complete mobile-first redesign with tab navigation (Browse Foods / Your Plan), sticky macro panel, keyboard-aware bottom actions.
+- **Mobile Optimization**: Implemented visualViewport API for keyboard detection, 100dvh dynamic viewport height, safe-area inset support, and webkit touch scrolling.
+- **Enhanced UX**: Meal slot selector defaults to Breakfast with visual feedback, category filters (Protein/Carbs/Fats), search debouncing (300ms), whole foods filter toggle.
+- **Touch-Friendly UI**: Large tap targets, proper spacing, smooth transitions, and responsive grid layout optimized for mobile devices.
+- **Keyboard Handling**: Dynamic bottom bar positioning, content padding adjustments, and fallback support for browsers without visualViewport.
+
 ### November 17, 2025 - Food Search Database Setup Complete + Whole Foods Filter
 - **Database Migration Applied**: Successfully created `usda_foods_index`, `food_catalog`, and `user_food_preferences` tables in production Supabase database.
 - **Food Catalog Seeded**: Populated `food_catalog` with 60 curated Quick Pick foods (20 protein, 20 carbs, 20 fats) with complete nutritional data.
