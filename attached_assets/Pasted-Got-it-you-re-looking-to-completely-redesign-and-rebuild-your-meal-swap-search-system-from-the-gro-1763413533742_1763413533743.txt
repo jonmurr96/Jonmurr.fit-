@@ -1,0 +1,113 @@
+Got it — you’re looking to completely redesign and rebuild your meal swap/search system from the ground up. Based on your image and explanation, here’s a fully detailed prompt you can plug into AI Studio / Replit / any AI code generator to regenerate a smarter, cleaner, and more functional manual meal plan generator and food swap UI system.
+
+⸻
+
+🧠 Prompt: Complete Redesign & Rebuild of the Meal Swap System (Search, UI, Data, Sync)
+
+⸻
+
+Goal:
+Rebuild the existing food swap system to offer accurate, clean, and relevant food substitutions (e.g., show “chicken breast” instead of fast food options like “Chick-fil-A”). The goal is to provide a clean user experience optimized for macro-based meal planning using verified food databases like USDA or custom-built catalogues. This includes redesigning the UI, improving the API queries, and syncing selected swaps with the user’s meal plan.
+
+⸻
+
+🔧 Functional Objectives:
+
+⸻
+
+✅ 1. Accurate Search Results from Verified Sources
+	•	Query only clean, whole food entries by default (e.g., “chicken breast,” “ground turkey,” “salmon,” “egg whites”).
+	•	Avoid branded/fast food items unless user toggles to view them.
+	•	Implement a “filter toggle”:
+	•	Whole foods (default)
+	•	Branded/Restaurant
+	•	All
+
+Data Sources:
+	•	Use the USDA FoodData Central API, but only pull from:
+	•	Foundation Foods
+	•	SR Legacy
+	•	Branded (optional)
+
+Enhancements:
+	•	Implement fuzzy search with typo-tolerance.
+	•	Sort by macro similarity to current food (e.g., show similar protein content).
+
+⸻
+
+✅ 2. UI Redesign (Modern, Functional, Contextual)
+Redesign UI Components:
+
+Section	Feature
+Top Section	Show current food card (Name, Portion, Macros)
+Below	Search bar with live autocomplete
+Filter	Button/toggle for food category (Protein / Carbs / Fats / All)
+Results	Cards with: Name, Macros per user’s portion size, Source (USDA/Foundation)
+Bottom	“Cancel” and “Confirm Swap” CTA
+Optional	Add image/icon if available for food item
+
+Make Sure:
+	•	“Confirm Swap” updates the current meal plan immediately and reflects changes in:
+	•	Macro totals
+	•	Daily nutrition log
+	•	Syncs to user’s meal_plan and food_log tables in Supabase
+
+⸻
+
+✅ 3. Rebuild Swap Logic with Macro Matching
+	•	When the user is swapping a food, show relevant foods with similar macros by:
+	•	Protein ±5g
+	•	Fat ±3g
+	•	Carbs ±5g
+	•	Calories ±50kcal
+	•	Suggest portion equivalents dynamically:
+	•	e.g., swapping 30g whey → 85g chicken breast
+
+⸻
+
+✅ 4. Backend Structure (Supabase Integration)
+Required Tables:
+	•	user_meal_plan: Stores current meal plan (meals, food items, portion, macros)
+	•	food_catalog: Caches USDA or custom foods with categories and metadata
+	•	user_food_log: Tracks all food interactions (for analytics, trends, gamification)
+	•	food_swaps: Optional history table for tracking swaps
+
+Features:
+	•	Store food category tags (e.g., protein, carb, fat, mixed)
+	•	Link swap history to improve future AI suggestions
+
+⸻
+
+✅ 5. Search Enhancements + Future-Proofing
+	•	Add option to search by:
+	•	Macros (e.g., “20g protein under 200 kcal”)
+	•	Food type (e.g., “lean meats,” “plant-based proteins”)
+	•	Add filters:
+	•	Calories
+	•	Prep type (e.g., grilled, raw, cooked)
+	•	Dietary tags: [Vegan, Vegetarian, Paleo, etc.]
+
+⸻
+
+💡 Bonus: AI-Powered Smart Swaps
+
+Add option for “Suggest Smart Swap”, where AI:
+	•	Suggests top 3 healthiest alternatives
+	•	Prioritizes whole foods
+	•	Matches user’s dietary preference (stored from onboarding)
+	•	Explains why it was suggested (“higher protein”, “less fat”, etc.)
+
+⸻
+
+✅ Final Outcome:
+
+A fully rebuilt, clean, macro-smart food swap system that:
+	•	Shows only relevant whole food items
+	•	Uses live search with accurate USDA data
+	•	Has a modern, functional UI
+	•	Syncs instantly with the meal plan and macro log
+	•	Supports customization, dietary filters, and AI assistance
+
+⸻
+
+Let me know if you’d like a working UI code snippet, Supabase table schema, or a modular prompt split for step-by-step integration.

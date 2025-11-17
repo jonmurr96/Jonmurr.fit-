@@ -45,12 +45,13 @@ The application features a modern, engaging design with a focus on gamification,
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods categorized by primary macro (protein/carbs/fats), including serving sizes, complete nutritional data, and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations. The FoodSwapModal component provides category-filtered swapping with side-by-side macro comparison and automatic meal plan recalculation with deep immutable state updates.
 
 ## Recent Changes
-### November 17, 2025 - Food Search Database Setup Complete
+### November 17, 2025 - Food Search Database Setup Complete + Whole Foods Filter
 - **Database Migration Applied**: Successfully created `usda_foods_index`, `food_catalog`, and `user_food_preferences` tables in production Supabase database.
 - **Food Catalog Seeded**: Populated `food_catalog` with 60 curated Quick Pick foods (20 protein, 20 carbs, 20 fats) with complete nutritional data.
 - **USDA Index Populated**: Successfully seeded `usda_foods_index` with 1,632 USDA foods via bulk ingestion (913 carbs, 340 protein, 237 fats, 142 other).
 - **Row Level Security Fixed**: Added INSERT and UPDATE policies to allow seeding while maintaining read-only access for users.
 - **Search System Live**: Local food search now operational with 1,692 total searchable foods (60 Quick Picks + 1,632 USDA foods).
+- **Whole Foods Filter**: Added smart filtering to show Foundation + SR Legacy whole foods by default, hiding branded/fast food items (e.g., show "Chicken Breast" instead of "Chick-fil-A"). Users can toggle 🥗 Whole Foods / 🍔 All Foods to include branded items when needed.
 - **Mobile Scroll Fixed**: Resolved webkit overflow scrolling issues in ManualMealPlanBuilder for smooth iOS/mobile scrolling.
 - **Performance**: Food searches complete in <100ms using PostgreSQL full-text + trigram search with hybrid fallback.
 

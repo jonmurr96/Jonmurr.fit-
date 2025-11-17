@@ -33,6 +33,7 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
   const [usdaFoods, setUsdaFoods] = useState<SimplifiedFood[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showQuickPicks, setShowQuickPicks] = useState(true);
+  const [includeBranded, setIncludeBranded] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -59,7 +60,7 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
       setShowQuickPicks(false);
       
       try {
-        const results = await searchUSDAFoods(searchQuery, 50);
+        const results = await searchUSDAFoods(searchQuery, 50, includeBranded);
         const filtered = results.filter(food => food.category === category);
         setUsdaFoods(filtered);
         console.log('🔍 Food swap search results:', filtered.length, 'foods');
@@ -73,7 +74,7 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
 
     const debounce = setTimeout(searchUSDA, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery, category, isOpen]);
+  }, [searchQuery, category, isOpen, includeBranded]);
 
   if (!isOpen) return null;
 
@@ -176,11 +177,23 @@ const FoodSwapModal: React.FC<FoodSwapModalProps> = ({
         />
 
         {!showQuickPicks && (
-          <div className="flex items-center gap-2 text-xs text-blue-400">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="break-words">Searching USDA database - all nutrition values per 100g</span>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs text-blue-400">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="break-words">Searching USDA database - all nutrition values per 100g</span>
+            </div>
+            <button
+              onClick={() => setIncludeBranded(!includeBranded)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+                includeBranded
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-green-500 text-black'
+              }`}
+            >
+              {includeBranded ? '🍔 All Foods' : '🥗 Whole Foods'}
+            </button>
           </div>
         )}
 

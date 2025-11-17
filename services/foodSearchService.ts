@@ -34,11 +34,13 @@ export interface FoodSearchResult extends IndexedFood {
  * @param query - Search term (e.g., "white rice cooked", "chicken breast raw")
  * @param category - Optional category filter ('protein', 'carbs', 'fats')
  * @param limit - Max results to return (default 25)
+ * @param includeBranded - Whether to include branded/fast food items (default false)
  */
 export async function searchFoodIndex(
   query: string,
   category?: 'protein' | 'carbs' | 'fats',
-  limit: number = 25
+  limit: number = 25,
+  includeBranded: boolean = false
 ): Promise<FoodSearchResult[]> {
   if (!query || query.trim().length < 2) {
     return [];
@@ -56,6 +58,11 @@ export async function searchFoodIndex(
     // Apply category filter if specified
     if (category) {
       dbQuery = dbQuery.eq('category', category);
+    }
+    
+    // Filter to whole foods only (Foundation + SR Legacy) unless branded foods requested
+    if (!includeBranded) {
+      dbQuery = dbQuery.in('data_type', ['Foundation', 'SR Legacy']);
     }
     
     // Use full-text search for initial filtering

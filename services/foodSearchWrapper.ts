@@ -59,17 +59,23 @@ function convertIndexedToSimplified(indexedFood: IndexedFood): SimplifiedFood {
  * 
  * @param query - Search term
  * @param pageSize - Number of results (default 25)
+ * @param includeBranded - Whether to include branded/fast food items (default false = whole foods only)
  * @returns Array of SimplifiedFood results
  */
-export async function searchUSDAFoods(query: string, pageSize: number = 25): Promise<SimplifiedFood[]> {
+export async function searchUSDAFoods(
+  query: string, 
+  pageSize: number = 25,
+  includeBranded: boolean = false
+): Promise<SimplifiedFood[]> {
   // Check if local index is populated
   const hasIndex = await isIndexPopulated();
   
   if (hasIndex) {
-    console.log('🔍 Using local food index for search:', query);
+    const foodType = includeBranded ? 'all foods' : 'whole foods';
+    console.log(`🔍 Using local food index for search (${foodType}):`, query);
     
-    // Search local index
-    const results = await searchFoodIndex(query, undefined, pageSize);
+    // Search local index with whole foods filter
+    const results = await searchFoodIndex(query, undefined, pageSize, includeBranded);
     
     // If index returned results, use them
     if (results.length > 0) {
@@ -94,18 +100,25 @@ export async function searchUSDAFoods(query: string, pageSize: number = 25): Pro
 /**
  * Search foods by category - uses local index if available
  * Falls back to live API if local index returns 0 results
+ * 
+ * @param query - Search term
+ * @param category - Food category filter
+ * @param pageSize - Number of results
+ * @param includeBranded - Whether to include branded/fast food items (default false)
  */
 export async function searchFoodsByCategory(
   query: string,
   category: 'protein' | 'carbs' | 'fats',
-  pageSize: number = 50
+  pageSize: number = 50,
+  includeBranded: boolean = false
 ): Promise<SimplifiedFood[]> {
   const hasIndex = await isIndexPopulated();
   
   if (hasIndex) {
-    console.log('🔍 Using local food index for category search:', category, query);
+    const foodType = includeBranded ? 'all foods' : 'whole foods';
+    console.log(`🔍 Using local food index for category search (${foodType}):`, category, query);
     
-    const results = await searchFoodIndex(query, category, pageSize);
+    const results = await searchFoodIndex(query, category, pageSize, includeBranded);
     
     if (results.length > 0) {
       return results.map(convertIndexedToSimplified);

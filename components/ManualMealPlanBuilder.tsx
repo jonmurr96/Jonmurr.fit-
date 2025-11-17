@@ -51,6 +51,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
   const [selectedMealForPhoto, setSelectedMealForPhoto] = useState<number | null>(null);
   const [showHiddenFoods, setShowHiddenFoods] = useState(false);
   const [pendingUndoFoodIds, setPendingUndoFoodIds] = useState<number[]>([]);
+  const [includeBranded, setIncludeBranded] = useState(false);
   const pendingTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -93,7 +94,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
       setSearchError(null);
       
       try {
-        const results = await searchUSDAFoods(searchQuery, 50);
+        const results = await searchUSDAFoods(searchQuery, 50, includeBranded);
         const filtered = results.filter(food => food.category === activeCategory);
         setUsdaFoods(filtered);
         setSearchError(null);
@@ -110,7 +111,7 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
 
     const debounce = setTimeout(searchUSDA, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, includeBranded]);
 
   // Quick picks (catalog foods) - filter based on showHiddenFoods toggle
   const filteredQuickPicks = catalogFoods
@@ -457,11 +458,23 @@ const ManualMealPlanBuilder: React.FC<ManualMealPlanBuilderProps> = ({ onClose, 
               />
               
               {!showQuickPicks && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-blue-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Searching USDA database - all nutrition values per 100g</span>
+                <div className="mt-2 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-xs text-blue-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Searching USDA database - all nutrition values per 100g</span>
+                  </div>
+                  <button
+                    onClick={() => setIncludeBranded(!includeBranded)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+                      includeBranded
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-green-500 text-black'
+                    }`}
+                  >
+                    {includeBranded ? '🍔 All Foods' : '🥗 Whole Foods'}
+                  </button>
                 </div>
               )}
               {showQuickPicks && (
