@@ -1,0 +1,154 @@
+Excellent — thanks for the screenshots and context.
+
+You’re asking for a full UI/UX + code reconstruction prompt for the Manual Meal Prep Generator, specifically to address these issues:
+
+⸻
+
+❌ Current Problems:
+	1.	Cluttered UI – key buttons and macros display overlap when the keyboard appears.
+	2.	Bad Mobile Experience – poor responsiveness; screen elements are hidden or inaccessible.
+	3.	Low Usability – the Browse/Search workflow isn’t intuitive or efficient.
+	4.	Weak Visual Hierarchy – macros, search results, and actions all blend together.
+	5.	Lacks modular design – not scalable or dev-friendly for future improvements.
+
+⸻
+
+Below is a Production-Ready Prompt (PRD-style) you can copy/paste into Replit AI, aistudio.google, or any AI dev assistant to fully rebuild this feature.
+
+⸻
+
+🧠 Prompt: Rebuild & Redesign the Manual Meal Prep Generator (UI + Functional Logic)
+
+⸻
+
+🔧 Objective:
+Rebuild the Manual Meal Prep Generator UI and underlying logic to offer a clean, mobile-optimized, intuitive interface where users can:
+	•	Manually build a custom meal plan by browsing or searching food items
+	•	Track macro totals live (Calories, Protein, Carbs, Fats)
+	•	Easily swap and manage food items
+	•	Save & sync plans with their nutrition dashboard
+
+⸻
+
+📱 UI/UX Requirements:
+
+View Name: ManualMealBuilder
+
+⸻
+
+📐 Layout Structure:
+
+Section	Description
+📊 Macro Summary Panel	Fixed top section showing live totals for Calories, Protein, Carbs, Fats. Use colored chips (Red = Protein, Blue = Carbs, Yellow = Fats). Sticky/floating to remain visible.
+🔍 Food Search Panel	Input field with smart search (USDA API). Expandable modal. Autocomplete suggestions. Must shift UI upward when keyboard is active.
+🍴 Food Catalog Grid	Segmented buttons: [Protein] [Carbs] [Fats]. Grid layout with food cards showing: name, macros, serving size, “Add” button. Scrollable section.
+📝 My Plan Preview	Shows selected foods in list view with: name, quantity, macros, and “remove” icon.
+✅ Bottom Actions	Buttons: [Cancel], [Save Plan]. Sticky footer. Disabled until user adds food.
+
+
+⸻
+
+✨ Functional Requirements:
+✅ Macro Tracker Logic
+	•	Update macros instantly as foods are added/removed.
+	•	Caloric total = (P x 4) + (C x 4) + (F x 9)
+
+✅ Search Improvements
+	•	Use USDA FoodData Central API
+	•	Prioritize “Foundation” and “SR Legacy” results
+	•	Autocomplete with 5–10 live suggestions
+	•	Use debounce (200–300ms) to reduce API spam
+
+✅ Filtering Options
+	•	Allow category-based browsing (Protein, Carbs, Fats)
+	•	Allow sorting by: [Calories Asc], [Protein Desc], [A-Z]
+
+✅ Food Card Component
+Each food item should be a modular card:
+
+{
+  name: "Chicken Breast",
+  serving: "100g",
+  macros: {
+    calories: 165,
+    protein: 31g,
+    carbs: 0g,
+    fat: 3.6g
+  },
+  source: "USDA",
+  image: Optional
+}
+
+
+⸻
+
+🧠 State Management:
+
+Use React/Next.js or React Native logic (depending on platform):
+	•	useState for selected foods
+	•	useEffect to recalculate macros
+	•	useContext or Supabase sync for global state
+	•	API hooks to call USDA FoodData Central
+
+⸻
+
+🧪 Validation:
+	•	Prevent saving an empty plan
+	•	Prevent duplicate foods (option to “increase serving” instead)
+	•	Validate macro numbers are correct on update
+
+⸻
+
+📦 Supabase Tables:
+
+-- user_meal_plans
+id (uuid)
+user_id (uuid)
+name (string)
+total_calories (int)
+total_protein (int)
+total_carbs (int)
+total_fats (int)
+foods (jsonb)
+created_at
+
+-- food_catalog (optional cache layer)
+id
+name
+category
+macros (jsonb)
+usda_id
+
+
+⸻
+
+🎨 Design Specs:
+	•	Dark mode support
+	•	Use consistent spacing (8pt grid)
+	•	Font: Inter or similar, 16px base size
+	•	Scrollable containers with max-height set to avoid keyboard overlap
+	•	Keyboard avoidance behavior: auto-scroll view when typing/searching
+
+⸻
+
+✅ Deliverables:
+	1.	Full responsive UI layout
+	2.	Live macro calculator
+	3.	USDA search with accurate filtering
+	4.	Food selection system with preview and delete
+	5.	Sticky save/cancel buttons
+	6.	Clean mobile experience (keyboard avoidance, no overlap)
+	7.	Supabase integration for saving plans
+	8.	Modular component structure for future extension (e.g., AI suggestions, food swapping)
+
+⸻
+
+Bonus Features (Optional):
+	•	🔄 “Suggest Smart Plan” – based on target macros
+	•	🔁 “Auto Swap” – if food not found, suggest nearest macro equivalent
+	•	📈 Show % macro target hit (e.g., “You’ve hit 78% of your protein target”)
+	•	📷 Add food by scanning nutrition label or image (future extension)
+
+⸻
+
+Let me know if you want this translated into working code, or a Figma-style UI mockup description next.
