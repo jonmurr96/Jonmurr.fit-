@@ -41,7 +41,6 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
   const [includeBranded, setIncludeBranded] = useState(false);
   const [pendingUndoFoodIds, setPendingUndoFoodIds] = useState<number[]>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const baselineHeightRef = useRef<number>(0);
   const pendingTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -101,64 +100,30 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
     return () => clearTimeout(debounce);
   }, [searchQuery, activeCategory, includeBranded]);
 
-  // Keyboard detection for mobile using baseline height approach
+  // Keyboard detection for mobile using visualViewport
   useEffect(() => {
-    // Store baseline height on mount
-    if (window.visualViewport) {
-      baselineHeightRef.current = window.visualViewport.height;
-    } else {
-      baselineHeightRef.current = window.innerHeight;
-    }
-
-    const handleOrientationChange = () => {
-      // Reset baseline and keyboard height on orientation change
-      if (window.visualViewport) {
-        baselineHeightRef.current = window.visualViewport.height;
-      } else {
-        baselineHeightRef.current = window.innerHeight;
-      }
-      setKeyboardHeight(0);
-    };
-
     const handleViewportChange = () => {
       if (window.visualViewport) {
-        const currentHeight = window.visualViewport.height;
+        // Calculate keyboard height using both viewport height and offset
+        const viewportHeight = window.visualViewport.height;
         const offsetTop = window.visualViewport.offsetTop || 0;
-        const baseline = baselineHeightRef.current;
+        const windowHeight = window.innerHeight;
         
-        // Calculate keyboard height from baseline (not window.innerHeight)
-        const heightDiff = baseline - currentHeight;
-        const totalKeyboardHeight = heightDiff + offsetTop;
-        
-        // Close to baseline = no keyboard
-        if (Math.abs(heightDiff) < 80 && offsetTop < 10) {
-          setKeyboardHeight(0);
-        }
-        // Keyboard is open (rely on orientationchange handler for rotation detection)
-        else if (totalKeyboardHeight > 80) {
-          setKeyboardHeight(totalKeyboardHeight);
-        } else {
-          setKeyboardHeight(0);
-        }
+        // Keyboard is open if viewport is smaller + has offset, or just significantly smaller
+        const totalDiff = (windowHeight - viewportHeight) + offsetTop;
+        setKeyboardHeight(totalDiff > 100 ? totalDiff : 0);
       } else {
-        // Fallback for browsers without visualViewport
-        const currentHeight = window.innerHeight;
-        const baseline = baselineHeightRef.current;
-        const diff = baseline - currentHeight;
-        
-        if (Math.abs(diff) < 80) {
-          setKeyboardHeight(0);
-        } else if (diff > 80) {
-          setKeyboardHeight(diff);
-        } else {
-          setKeyboardHeight(0);
-        }
+        // Fallback for browsers without visualViewport (older Android WebView)
+        const windowHeight = window.innerHeight;
+        const docHeight = document.documentElement.clientHeight;
+        const diff = Math.abs(windowHeight - docHeight);
+        setKeyboardHeight(diff > 100 ? diff : 0);
       }
     };
 
-    // Listen to orientation changes explicitly
-    window.addEventListener('orientationchange', handleOrientationChange);
-    
+    // Initial check
+    handleViewportChange();
+
     // Listen to visualViewport if available
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange);
@@ -169,7 +134,6 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
     window.addEventListener('resize', handleViewportChange);
 
     return () => {
-      window.removeEventListener('orientationchange', handleOrientationChange);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleViewportChange);
         window.visualViewport.removeEventListener('scroll', handleViewportChange);
@@ -440,12 +404,8 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
 
         {/* Content Area - Keyboard-aware scrolling with dynamic bottom padding */}
         <div 
-          className="flex-1" 
-          style={{ 
-            paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '100px',
-            overflow: keyboardHeight > 0 ? 'auto' : 'hidden', // Enable scrolling when keyboard is open
-            WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
-          }}
+          className="flex-1 overflow-hidden" 
+          style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '100px' }}
         >
           {activeTab === 'browse' ? (
             <div className="h-full flex flex-col">
