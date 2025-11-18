@@ -438,17 +438,16 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
           </button>
         </div>
 
-        {/* Content Area - Keyboard-aware scrolling with dynamic bottom padding */}
+        {/* Content Area - Always scrollable with keyboard-aware padding */}
         <div 
-          className="flex-1" 
+          className="flex-1 overflow-y-auto" 
           style={{ 
             paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '100px',
-            overflow: keyboardHeight > 0 ? 'auto' : 'hidden', // Enable scrolling when keyboard is open
             WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
           }}
         >
           {activeTab === 'browse' ? (
-            <div className="h-full flex flex-col">
+            <div className="flex flex-col min-h-full">
               {/* Search & Filters */}
               <div className="flex-shrink-0 p-4 space-y-4">
                 <SearchBar
@@ -516,11 +515,8 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
                 )}
               </div>
 
-              {/* Food Grid - Scrollable */}
-              <div 
-                className="flex-1 overflow-y-auto p-4"
-                style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-              >
+              {/* Food Grid - No nested scroll, parent handles scrolling */}
+              <div className="p-4">
                 {searchError && (
                   <div className="bg-red-900/20 border border-red-700 rounded-lg p-4 mb-4">
                     <p className="text-red-400 text-sm">{searchError}</p>
@@ -554,7 +550,7 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
               </div>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="p-4">
               <PlanPreview
                 meals={meals}
                 onRemoveFood={handleRemoveFood}
