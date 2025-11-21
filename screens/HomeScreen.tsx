@@ -6,6 +6,9 @@ import { MiniHeatMap } from '../components/heatmap/MiniHeatMap';
 import { useHeatMap } from '../hooks/useHeatMap';
 import { SettingsScreen } from './SettingsScreen';
 import PersonalizedGoalsCard from '../components/PersonalizedGoalsCard';
+import { MuscleGroupSelector } from '../components/muscle-map/MuscleGroupSelector';
+import { createMuscleTrackingService } from '../services/muscleTrackingService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HomeScreenProps {
   user: UserProfile;
@@ -509,6 +512,57 @@ const ChallengesWidget: React.FC<{ challenges: Challenge[]; }> = ({ challenges }
     );
 };
 
+const MuscleRecoveryWidget: React.FC<{ userId: string }> = ({ userId }) => {
+    const [muscleData, setMuscleData] = useState<Array<{ muscleGroup: any; lastTrained: Date | null; intensity?: number }>>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const loadMuscleRecovery = async () => {
+            try {
+                const muscleService = createMuscleTrackingService(userId);
+                const recoveryData = await muscleService.getMuscleRecoveryStatus(30);
+                
+                const muscleGroups: Array<{ muscleGroup: any; lastTrained: Date | null; intensity?: number }> = recoveryData.map(muscle => ({
+                    muscleGroup: muscle.muscle_group as any,
+                    lastTrained: muscle.last_trained_date ? new Date(muscle.last_trained_date) : null,
+                    intensity: muscle.avg_intensity,
+                }));
+                
+                setMuscleData(muscleGroups);
+            } catch (error) {
+                console.error('Failed to load muscle recovery data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadMuscleRecovery();
+    }, [userId]);
+
+    return (
+        <div className="bg-zinc-900 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-white text-lg">Muscle Recovery</h3>
+            </div>
+            {isLoading ? (
+                <div className="flex justify-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
+                </div>
+            ) : muscleData.length === 0 ? (
+                <div className="text-center py-6 text-zinc-400 text-sm">
+                    <p>💪 Complete a workout to start tracking muscle recovery</p>
+                </div>
+            ) : (
+                <MuscleGroupSelector
+                    muscleData={muscleData}
+                    selectedMuscles={[]}
+                    mode="view"
+                />
+            )}
+        </div>
+    );
+};
+
 const WaterWidget: React.FC<{
     intake: number;
     goal: number;
@@ -792,6 +846,8 @@ const HomeScreenComponent: React.FC<HomeScreenProps> = ({ user, macros, macroTar
           />
         )}
       </div>
+
+      <MuscleRecoveryWidget userId={user.id} />
 
       <QuickStartCard savedWorkouts={savedWorkouts} onStart={handleStartWorkout} />
 
