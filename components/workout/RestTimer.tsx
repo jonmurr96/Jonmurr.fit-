@@ -1,62 +1,113 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 interface RestTimerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  initialDuration?: number; // seconds
+  defaultDuration?: number;
   onComplete?: () => void;
+  autoStart?: boolean;
+  className?: string;
+  onDurationChange?: (seconds: number) => void;
 }
 
+const PRESET_DURATIONS = [
+  { label: '30s', seconds: 30 },
+  { label: '1m', seconds: 60 },
+  { label: '2m', seconds: 120 },
+  { label: '3m', seconds: 180 },
+  { label: '5m', seconds: 300 },
+];
+
 export const RestTimer: React.FC<RestTimerProps> = ({
-  isOpen,
-  onClose,
-  initialDuration = 45,
+  defaultDuration = 120,
   onComplete,
+  autoStart = false,
+  className = '',
+  onDurationChange,
 }) => {
-  const [duration, setDuration] = useState(initialDuration);
-  const [timeRemaining, setTimeRemaining] = useState(initialDuration);
-  const [isRunning, setIsRunning] = useState(true);
+  const [duration, setDuration] = useState(defaultDuration);
+  const [timeRemaining, setTimeRemaining] = useState(defaultDuration);
+  const [isRunning, setIsRunning] = useState(autoStart);
+  const [isCompleted, setIsCompleted] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setDuration(initialDuration);
-      setTimeRemaining(initialDuration);
+    if (autoStart) {
       setIsRunning(true);
     }
-  }, [isOpen, initialDuration]);
+  }, [autoStart]);
 
   useEffect(() => {
-    if (!isOpen || !isRunning) {
+    setDuration(defaultDuration);
+    setTimeRemaining(defaultDuration);
+    setIsCompleted(false);
+  }, [defaultDuration]);
+
+  useEffect(() => {
+    if (isRunning && timeRemaining > 0) {
+      intervalRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            setIsRunning(false);
+            setIsCompleted(true);
+            if (navigator.vibrate) {
+              navigator.vibrate([200, 100, 200]);
+            }
+            onComplete?.();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      return;
     }
-
-    intervalRef.current = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          setIsRunning(false);
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-          onComplete?.();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-        intervalRef.current = null;
       }
     };
-  }, [isOpen, isRunning, onComplete]);
+  }, [isRunning, timeRemaining, onComplete]);
+
+  const handleStart = () => {
+    if (timeRemaining === 0) {
+      setTimeRemaining(duration);
+      setIsCompleted(false);
+    }
+    setIsRunning(true);
+  };
+
+  const handlePause = () => {
+    setIsRunning(false);
+  };
+
+  const handleStop = () => {
+    setIsRunning(false);
+    setTimeRemaining(duration);
+    setIsCompleted(false);
+  };
+
+  const handleSkip = () => {
+    setIsRunning(false);
+    setTimeRemaining(0);
+    setIsCompleted(true);
+    onComplete?.();
+  };
+
+  const handlePresetClick = (seconds: number) => {
+    setDuration(seconds);
+    setTimeRemaining(seconds);
+    setIsCompleted(false);
+    setIsRunning(false);
+    onDurationChange?.(seconds);
+  };
+
+  const progress = duration > 0 ? (timeRemaining / duration) * 100 : 0;
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -64,113 +115,94 @@ export const RestTimer: React.FC<RestTimerProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const adjustTime = (adjustment: number) => {
-    setTimeRemaining((prev) => Math.max(0, prev + adjustment));
-    setDuration((prev) => Math.max(0, prev + adjustment));
-  };
-
-  const skip = () => {
-    setIsRunning(false);
-    onClose();
-  };
-
-  const togglePause = () => {
-    setIsRunning((prev) => !prev);
-  };
-
-  if (!isOpen) return null;
-
-  const progress = duration > 0 ? ((duration - timeRemaining) / duration) * 100 : 0;
-  const circumference = 2 * Math.PI * 90;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
-
   return (
-    <div
-      className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="bg-zinc-900 rounded-2xl p-8 w-full max-w-md border border-zinc-800"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-white">Rest Timer</h2>
-          <p className="text-sm text-zinc-400 mt-1">
-            Take a break and get ready for your next set
-          </p>
-        </div>
-
-        {/* Circular Progress */}
-        <div className="relative flex items-center justify-center mb-8">
-          <svg className="w-64 h-64 transform -rotate-90">
-            {/* Background circle */}
+    <div className={`bg-zinc-800 rounded-lg p-3 ${className}`}>
+      <div className="flex items-center gap-3">
+        {/* Circular Progress Timer */}
+        <div className="relative flex-shrink-0">
+          <svg width="80" height="80" className="transform -rotate-90">
             <circle
-              cx="128"
-              cy="128"
-              r="90"
-              stroke="currentColor"
-              strokeWidth="8"
-              fill="transparent"
-              className="text-zinc-800"
+              cx="40"
+              cy="40"
+              r={radius}
+              stroke="#27272a"
+              strokeWidth="6"
+              fill="none"
             />
-            {/* Progress circle */}
             <circle
-              cx="128"
-              cy="128"
-              r="90"
-              stroke="currentColor"
-              strokeWidth="8"
-              fill="transparent"
+              cx="40"
+              cy="40"
+              r={radius}
+              stroke={isCompleted ? '#10b981' : isRunning ? '#22c55e' : '#71717a'}
+              strokeWidth="6"
+              fill="none"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
-              className="text-blue-500 transition-all duration-300"
               strokeLinecap="round"
+              className="transition-all duration-1000 ease-linear"
             />
           </svg>
-
-          {/* Time Display */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-6xl font-bold text-white">
+            <div className={`text-lg font-bold ${isCompleted ? 'text-green-500' : 'text-white'}`}>
               {formatTime(timeRemaining)}
-            </div>
-            <div className="text-lg text-zinc-400 mt-2">
-              {formatTime(duration)}
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <button
-            onClick={() => adjustTime(-30)}
-            className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-semibold text-white transition-colors"
-          >
-            -30s
-          </button>
-          
-          <button
-            onClick={togglePause}
-            className="px-8 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-semibold text-white transition-colors"
-          >
-            {isRunning ? 'Pause' : 'Resume'}
-          </button>
+        {/* Controls and Presets */}
+        <div className="flex-1 flex flex-col gap-2">
+          {/* Control Buttons */}
+          <div className="flex gap-1.5">
+            {!isRunning ? (
+              <button
+                onClick={handleStart}
+                className="flex-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                {timeRemaining === 0 ? 'Restart' : 'Start'}
+              </button>
+            ) : (
+              <button
+                onClick={handlePause}
+                className="flex-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Pause
+              </button>
+            )}
+            <button
+              onClick={handleStop}
+              className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Reset
+            </button>
+            <button
+              onClick={handleSkip}
+              className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Skip
+            </button>
+          </div>
 
-          <button
-            onClick={() => adjustTime(30)}
-            className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-semibold text-white transition-colors"
-          >
-            +30s
-          </button>
+          {/* Preset Duration Buttons */}
+          <div className="flex gap-1.5">
+            {PRESET_DURATIONS.map((preset) => (
+              <button
+                key={preset.seconds}
+                onClick={() => handlePresetClick(preset.seconds)}
+                disabled={isRunning}
+                className={`
+                  flex-1 px-2 py-1 rounded text-xs font-semibold transition-all
+                  ${duration === preset.seconds
+                    ? 'bg-green-500 text-white'
+                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                  }
+                  ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* Skip Button */}
-        <button
-          onClick={skip}
-          className="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-bold text-white transition-colors"
-        >
-          Skip
-        </button>
       </div>
     </div>
   );
