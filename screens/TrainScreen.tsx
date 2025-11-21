@@ -3,7 +3,6 @@ import { TrainingProgram, Workout, WorkoutHistory } from '../types';
 import { ArrowLeftIcon } from '../components/Icons';
 import { WeekCalendar } from '../components/workout/WeekCalendar';
 import { ExerciseCard } from '../components/workout/ExerciseCard';
-import { RestTimer } from '../components/workout/RestTimer';
 import { createWorkoutSessionService, WorkoutSession, WorkoutSet as DBWorkoutSet, PreviousSetData } from '../services/workoutSessionService';
 import { createMuscleTrackingService } from '../services/muscleTrackingService';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,8 +25,6 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [sessionSets, setSessionSets] = useState<DBWorkoutSet[]>([]);
   const [previousSetsMap, setPreviousSetsMap] = useState<Record<string, PreviousSetData[]>>({});
-  const [isRestTimerOpen, setIsRestTimerOpen] = useState(false);
-  const [restDuration, setRestDuration] = useState(45);
   const [isLoading, setIsLoading] = useState(true);
   const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>(() => {
@@ -149,11 +146,6 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
     } catch (error) {
       console.error('Error updating set:', error);
     }
-  };
-
-  const handleStartRestTimer = (duration: number) => {
-    setRestDuration(duration);
-    setIsRestTimerOpen(true);
   };
 
   const handleFinishWorkout = async () => {
@@ -330,7 +322,6 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
               onSetUpdate={(setNumber, weightKg, reps) =>
                 handleSetUpdate(exercise.name, setNumber, weightKg, reps)
               }
-              onStartRestTimer={handleStartRestTimer}
             />
           ))}
         </div>
@@ -346,16 +337,6 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
           </div>
         )}
       </div>
-
-      {/* Rest Timer Modal */}
-      <RestTimer
-        isOpen={isRestTimerOpen}
-        onClose={() => setIsRestTimerOpen(false)}
-        initialDuration={restDuration}
-        onComplete={() => {
-          setIsRestTimerOpen(false);
-        }}
-      />
     </div>
   );
 };

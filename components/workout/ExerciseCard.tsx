@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PreviousSetData, WorkoutSet } from '../../services/workoutSessionService';
+import { RestTimer } from './RestTimer';
 
 interface ExerciseSet {
   setNumber: number;
@@ -17,7 +18,7 @@ interface ExerciseCardProps {
   onWeightUnitToggle: () => void;
   onSetComplete: (setNumber: number, weightKg: number, reps: number) => Promise<void>;
   onSetUpdate: (setNumber: number, weightKg: number | null, reps: number | null) => void;
-  onStartRestTimer: (duration: number) => void;
+  defaultRestSeconds?: number;
 }
 
 const KG_TO_LBS = 2.20462;
@@ -47,10 +48,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onWeightUnitToggle,
   onSetComplete,
   onSetUpdate,
-  onStartRestTimer,
+  defaultRestSeconds = 120,
 }) => {
   const [sets, setSets] = useState<ExerciseSet[]>([]);
   const [editingSet, setEditingSet] = useState<number | null>(null);
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [restDuration, setRestDuration] = useState(defaultRestSeconds);
+  const [restTimerKey, setRestTimerKey] = useState(0);
 
   useEffect(() => {
     // Initialize sets based on targetSets
@@ -66,6 +70,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     }
     setSets(initialSets);
   }, [targetSets, currentSets]);
+
+  useEffect(() => {
+    const savedRest = localStorage.getItem(`restTimer_${exerciseName}`);
+    if (savedRest) {
+      setRestDuration(parseInt(savedRest, 10));
+    } else {
+      setRestDuration(defaultRestSeconds);
+    }
+  }, [exerciseName, defaultRestSeconds]);
 
   const getPreviousSet = (setNumber: number): PreviousSetData | null => {
     return previousSets.find(s => s.set_number === setNumber) || null;
@@ -92,12 +105,23 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )
       );
 
-      // Auto-start rest timer (45 seconds default)
-      onStartRestTimer(45);
+      // Auto-start rest timer
+      setShowRestTimer(true);
+      setRestTimerKey(prev => prev + 1);
     } catch (error) {
       console.error('Error completing set:', error);
       alert('Failed to save set');
     }
+  };
+
+  const handleRestDurationChange = (seconds: number) => {
+    setRestDuration(seconds);
+    localStorage.setItem(`restTimer_${exerciseName}`, seconds.toString());
+  };
+
+  const handleRestComplete = () => {
+    // Optional: Add sound/notification here
+    console.log('Rest period complete!');
   };
 
   const handleWeightChange = (setNumber: number, value: string) => {
@@ -288,6 +312,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           );
         })}
       </div>
+
+      {/* Rest Timer */}
+      {showRestTimer && (
+        <div className="mt-3">
+          <RestTimer
+            key={restTimerKey}
+            defaultDuration={restDuration}
+            onComplete={handleRestComplete}
+            autoStart={true}
+            onDurationChange={handleRestDurationChange}
+          />
+        </div>
+      )}
 
       {/* Add Set Button */}
       <button
