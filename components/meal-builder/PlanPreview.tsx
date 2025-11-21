@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MealPlanItem } from '../../types';
+import { ServingSizeSelector } from './ServingSizeSelector';
+import { ServingSize } from '../../utils/unitConversion';
 
 interface MealSlot {
   name: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack 1' | 'Snack 2';
@@ -9,12 +11,15 @@ interface MealSlot {
 interface PlanPreviewProps {
   meals: MealSlot[];
   onRemoveFood: (mealIndex: number, foodIndex: number) => void;
+  onUpdateServing?: (mealIndex: number, foodIndex: number, newServing: ServingSize) => void;
 }
 
 export const PlanPreview: React.FC<PlanPreviewProps> = ({
   meals,
   onRemoveFood,
+  onUpdateServing,
 }) => {
+  const [editingItem, setEditingItem] = useState<{mealIndex: number; foodIndex: number} | null>(null);
   const totalItems = meals.reduce((sum, meal) => sum + meal.items.length, 0);
 
   if (totalItems === 0) {
@@ -55,51 +60,79 @@ export const PlanPreview: React.FC<PlanPreviewProps> = ({
             </div>
 
             <div className="space-y-2">
-              {meal.items.map((item, foodIndex) => (
-                <div
-                  key={foodIndex}
-                  className="bg-zinc-800 rounded-lg p-3 border border-zinc-700"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm mb-1 break-words">
-                        {item.food}
-                      </h4>
-                      <p className="text-xs text-zinc-400">
-                        {item.quantity}
-                      </p>
+              {meal.items.map((item, foodIndex) => {
+                const isEditing = editingItem?.mealIndex === mealIndex && editingItem?.foodIndex === foodIndex;
+                
+                return (
+                  <div
+                    key={foodIndex}
+                    className="bg-zinc-800 rounded-lg p-3 border border-zinc-700"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-white text-sm mb-1 break-words">
+                          {item.food}
+                        </h4>
+                        {item.servingSize && onUpdateServing ? (
+                          <button
+                            onClick={() => setEditingItem(isEditing ? null : { mealIndex, foodIndex })}
+                            className="text-xs text-zinc-400 hover:text-green-400 transition-colors underline"
+                          >
+                            {item.quantity} {isEditing ? '▲' : '▼'}
+                          </button>
+                        ) : (
+                          <p className="text-xs text-zinc-400">
+                            {item.quantity}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => onRemoveFood(mealIndex, foodIndex)}
+                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
+                        title="Remove"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => onRemoveFood(mealIndex, foodIndex)}
-                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
-                      title="Remove"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-xs">
-                    <div className="bg-zinc-900 rounded px-2 py-1 text-center">
-                      <p className="text-white font-semibold">{Math.round(item.calories)}</p>
-                      <p className="text-zinc-500">kcal</p>
-                    </div>
-                    <div className="bg-red-600/20 rounded px-2 py-1 text-center">
-                      <p className="text-red-400 font-semibold">{Math.round(item.protein)}g</p>
-                      <p className="text-zinc-500">P</p>
-                    </div>
-                    <div className="bg-blue-600/20 rounded px-2 py-1 text-center">
-                      <p className="text-blue-400 font-semibold">{Math.round(item.carbs)}g</p>
-                      <p className="text-zinc-500">C</p>
-                    </div>
-                    <div className="bg-yellow-600/20 rounded px-2 py-1 text-center">
-                      <p className="text-yellow-400 font-semibold">{Math.round(item.fat)}g</p>
-                      <p className="text-zinc-500">F</p>
+                    {/* Inline Serving Size Editor */}
+                    {isEditing && item.servingSize && onUpdateServing && (
+                      <div className="mb-3 p-3 bg-zinc-900 rounded-lg border border-zinc-700">
+                        <ServingSizeSelector
+                          value={item.servingSize}
+                          onChange={(newServing) => {
+                            onUpdateServing(mealIndex, foodIndex, newServing);
+                            setEditingItem(null);
+                          }}
+                          foodDescription={item.food}
+                          compact={false}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <div className="bg-zinc-900 rounded px-2 py-1 text-center">
+                        <p className="text-white font-semibold">{Math.round(item.calories)}</p>
+                        <p className="text-zinc-500">kcal</p>
+                      </div>
+                      <div className="bg-red-600/20 rounded px-2 py-1 text-center">
+                        <p className="text-red-400 font-semibold">{Math.round(item.protein)}g</p>
+                        <p className="text-zinc-500">P</p>
+                      </div>
+                      <div className="bg-blue-600/20 rounded px-2 py-1 text-center">
+                        <p className="text-blue-400 font-semibold">{Math.round(item.carbs)}g</p>
+                        <p className="text-zinc-500">C</p>
+                      </div>
+                      <div className="bg-yellow-600/20 rounded px-2 py-1 text-center">
+                        <p className="text-yellow-400 font-semibold">{Math.round(item.fat)}g</p>
+                        <p className="text-zinc-500">F</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );

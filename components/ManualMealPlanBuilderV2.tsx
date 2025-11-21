@@ -9,7 +9,7 @@ import { MacroSummaryCard } from './meal-builder/MacroSummaryCard';
 import { FoodCard } from './meal-builder/FoodCard';
 import { SearchBar } from './meal-builder/SearchBar';
 import { PlanPreview } from './meal-builder/PlanPreview';
-import { ServingSize, calculateMacrosForServing, formatServingSize } from '../utils/unitConversion';
+import { ServingSize, calculateMacrosForServing, formatServingSize, convertToGrams } from '../utils/unitConversion';
 
 interface ManualMealPlanBuilderProps {
   onClose: () => void;
@@ -270,36 +270,50 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
     });
   };
 
-  const handleUpdateServing = (mealIndex: number, itemIndex: number, newServing: number) => {
+  const handleUpdateServing = (mealIndex: number, itemIndex: number, newServingSize: ServingSize) => {
     setMeals(prev => {
       const newMeals = [...prev];
       const item = newMeals[mealIndex].items[itemIndex];
+      
+      // Try to find the catalog food for base macros
       const catalogFood = catalogFoods.find(f => f.id === item.catalogFoodId);
       
-      if (catalogFood && newServing > 0) {
-        const multiplier = newServing / catalogFood.serving_size;
-        newMeals[mealIndex].items[itemIndex] = {
-          ...item,
-          serving: newServing,
-          quantity: `${newServing}${catalogFood.serving_unit}`,
-          calories: catalogFood.calories * multiplier,
-          protein: catalogFood.protein_g * multiplier,
-          carbs: catalogFood.carbs_g * multiplier,
-          fat: catalogFood.fat_g * multiplier,
+      // Determine base macros (per 100g)
+      let baseMacros;
+      if (catalogFood) {
+        baseMacros = {
+          calories: catalogFood.calories,
+          protein: catalogFood.protein_g,
+          carbs: catalogFood.carbs_g,
+          fat: catalogFood.fat_g,
         };
-      } else if (newServing > 0) {
-        const originalServing = item.serving || 1;
-        const multiplier = newServing / originalServing;
-        newMeals[mealIndex].items[itemIndex] = {
-          ...item,
-          serving: newServing,
-          quantity: `${newServing}${item.servingUnit}`,
-          calories: item.calories / originalServing * newServing,
-          protein: item.protein / originalServing * newServing,
-          carbs: item.carbs / originalServing * newServing,
-          fat: item.fat / originalServing * newServing,
+      } else {
+        // For USDA foods without catalog reference, reconstruct base macros
+        // assuming the stored values were from a previous serving size
+        const oldServing = item.servingSize || { amount: 100, unit: 'g' };
+        const oldGrams = convertToGrams(oldServing, item.food);
+        const multiplierToBase = 100 / oldGrams;
+        
+        baseMacros = {
+          calories: item.calories * multiplierToBase,
+          protein: item.protein * multiplierToBase,
+          carbs: item.carbs * multiplierToBase,
+          fat: item.fat * multiplierToBase,
         };
       }
+      
+      // Calculate new macros for the new serving size
+      const adjustedMacros = calculateMacrosForServing(baseMacros, newServingSize, item.food);
+      
+      newMeals[mealIndex].items[itemIndex] = {
+        ...item,
+        servingSize: newServingSize,
+        quantity: formatServingSize(newServingSize),
+        calories: adjustedMacros.calories,
+        protein: adjustedMacros.protein,
+        carbs: adjustedMacros.carbs,
+        fat: adjustedMacros.fat,
+      };
       
       return newMeals;
     });
@@ -562,6 +576,7 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
               <PlanPreview
                 meals={meals}
                 onRemoveFood={handleRemoveFood}
+                onUpdateServing={handleUpdateServing}
               />
             </div>
           )}
