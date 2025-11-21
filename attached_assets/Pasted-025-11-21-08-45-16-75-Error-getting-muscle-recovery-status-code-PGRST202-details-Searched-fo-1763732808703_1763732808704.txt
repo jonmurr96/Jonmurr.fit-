@@ -1,0 +1,16 @@
+025-11-21 08:45:16.75
+Error getting muscle recovery status:
+{code: "PGRST202", details: "Searched for the function public.get_muscle_recovery_status with parameter p_days_back or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.", hint: "Perhaps you meant to call the function public.get_muscle_recovery_status(p_days_back, p_user_id)", message: "Could not find the function public.get_muscle_recovery_status(p_days_back) in the schema cache"}
+2025-11-21 08:45:16.75
+Failed to load muscle recovery data:
+{code: "PGRST202", details: "Searched for the function public.get_muscle_recovery_status with parameter p_days_back or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.", hint: "Perhaps you meant to call the function public.get_muscle_recovery_status(p_days_back, p_user_id)", message: "Could not find the function public.get_muscle_recovery_status(p_days_back) in the schema cache"}
+2025-11-21 08:45:16.75
+Error getting muscle recovery status:
+{code: "PGRST202", details: "Searched for the function public.get_muscle_recovery_status with parameter p_days_back or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.", hint: "Perhaps you meant to call the function public.get_muscle_recovery_status(p_days_back, p_user_id)", message: "Could not find the function public.get_muscle_recovery_status(p_days_back) in the schema cache"}
+2025-11-21 08:45:16.75
+Failed to load muscle recovery data:
+{code: "PGRST202", details: "Searched for the function public.get_muscle_recovery_status with parameter p_days_back or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.", hint: "Perhaps you meant to call the function public.get_muscle_recovery_status(p_days_back, p_user_id)", message: "Could not find the function public.get_muscle_recovery_status(p_days_back) in the schema cache"}
+code: "PGRST202"
+details: "Searched for the function public.get_muscle_recovery_status with parameter p_days_back or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache."
+hint: "Perhaps you meant to call the function public.get_muscle_recovery_status(p_days_back, p_user_id)"
+message: "Could not find the function public.get_muscle_recovery_status(p_days_back) in the schema cache"
