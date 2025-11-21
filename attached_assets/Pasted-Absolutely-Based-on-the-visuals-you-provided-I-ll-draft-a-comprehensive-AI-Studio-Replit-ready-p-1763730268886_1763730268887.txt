@@ -1,0 +1,167 @@
+Absolutely. Based on the visuals you provided, I’ll draft a comprehensive AI Studio / Replit-ready prompt that reimagines your Workout Generation System—integrating the strongest features from these screenshots into your current app flow.
+
+⸻
+
+🚀 Prompt: Upgrade the Workout Generation System (Inspired by Visual References)
+
+⸻
+
+Objective:
+Use the provided visuals to reimagine and fully upgrade my current workout generation system. The goal is to make the experience more dynamic, personalized, and interactive—integrating features like real-time tracking, muscle targeting, data-driven recommendations, and gamified feedback.
+
+⸻
+
+🔧 Core Functional Requirements:
+
+⸻
+
+1. Interactive Muscle Heatmap System (Body View)
+Inspired by Image 1 & 2
+	•	Implement a dynamic muscle heatmap UI that updates based on:
+	•	Which muscles were trained recently
+	•	Muscle recovery status (color-coded)
+	•	Active training frequency per body part
+	•	Stats at top:
+	•	Days since last workout
+	•	Number of fresh muscle groups available
+	•	Tap-to-filter: Tapping on a muscle group should show:
+	•	Exercises targeting that group
+	•	Recent performance
+	•	Suggestions for next workout
+
+⸻
+
+2. Custom Muscle Targeting Selection
+Inspired by Image 2
+	•	During plan generation or manual workout build:
+	•	Let users select focus areas (e.g., chest, glutes, quads, abs)
+	•	Store preferences and train the AI to prioritize those zones
+	•	Combine this with fatigue data to avoid overtraining
+
+⸻
+
+3. Schedule & Frequency Personalization
+Inspired by Image 3
+	•	Allow users to select training days (multi-select M–Sun)
+	•	Allow users to choose workout duration per session:
+	•	10–20, 20–30, 30–45, 45–60, 60–75, 75–90 min
+	•	Use this data to dynamically structure:
+	•	Weekly split (push/pull/legs, full body, etc.)
+	•	Volume and intensity scaling
+
+⸻
+
+4. Equipment Personalization + Filtering
+Inspired by Image 4
+	•	Rebuild the equipment selection UI:
+	•	Search bar
+	•	Toggle switches for available equipment
+	•	Icon + name for each piece
+	•	AI should filter exercise library based on these selections
+	•	Allow users to update this anytime from settings
+
+⸻
+
+5. AI Weight, Rep & Progression Suggestions
+Inspired by Image 5
+	•	After a few logged sessions, introduce smart AI suggestions:
+	•	Auto-suggest weight based on previous best
+	•	Adjust reps based on progress/fatigue
+	•	Visual progression chart over time
+	•	Add “Suggested → Did It” toggle to track effort and accuracy
+	•	Store data for progressive overload recommendations
+
+⸻
+
+6. Workout Logging with Real-Time Inputs
+Inspired by Image 6 & 7
+	•	Include ability to:
+	•	Log weight, reps, sets per exercise
+	•	Add notes (e.g. “watch form” or “felt easy”)
+	•	Track superset/rest-pause sets
+	•	Dynamic suggestions:
+	•	Auto-fill previous set values
+	•	Allow “+ Add Set” functionality per exercise
+	•	Add emojis/tags to rate each set (energy, form, etc.)
+
+⸻
+
+7. Rest Timer + 1RM Auto-Calc
+Inspired by Image 8
+	•	Implement custom rest timers:
+	•	Predefined (30s, 60s, 90s, etc.)
+	•	Custom duration
+	•	Auto-start between sets
+	•	One-Rep Max Calculator:
+	•	Estimate 1RM using Epley or Brzycki formulas
+	•	Display historical progress in 1RM per movement
+
+⸻
+
+8. Gamified Leaderboards & Performance Rankings
+Inspired by Image 9
+	•	Create daily, weekly, and monthly leaderboards:
+	•	Sort by: total volume, consistency, streaks, XP
+	•	Filter by: muscle group, exercise, gym location (optional)
+	•	Encourage community engagement through:
+	•	Badges for rank-ups
+	•	Notifications when you pass a friend
+
+⸻
+
+9. Workout Summary & Performance Breakdown
+Inspired by Image 10
+	•	After workout completion, show:
+	•	Duration
+	•	Calories burned
+	•	Reps completed
+	•	Total weight lifted
+	•	Exercise completion rate
+	•	Progress % vs. previous sessions
+	•	Add visual charts:
+	•	Muscle usage
+	•	Weight lifted over time
+	•	Adherence to plan
+
+⸻
+
+🧠 Smart AI Behavior:
+	•	Use the onboarding data to:
+	•	Create personalized splits (e.g., 4-day push/pull/legs/core)
+	•	Select difficulty (Beginner, Intermediate, Advanced)
+	•	Adapt load and rest times
+	•	Log everything to Supabase per user_id
+	•	Save all generated plans with an option to edit or regenerate
+
+⸻
+
+🔄 Optional Add-ons:
+	•	Workout Drafts: Save unfinished workouts
+	•	Import/Export Workouts: Upload PDF/image or export to PDF/email
+	•	Swipe-to-Edit Workouts: Quickly swap exercises with alternatives
+	•	Swipe to Log or Skip from main workout screen
+
+⸻
+
+📦 Backend Tables (Supabase):
+	•	user_workout_plans: All generated/custom workouts
+	•	user_workout_logs: Logged sessions
+	•	exercise_catalog: All exercise data (linked to muscle group, equipment)
+	•	equipment_list: Available gym gear
+	•	leaderboard_stats: Tracks XP, volume, consistency
+	•	user_preferences: Focus areas, preferred training style, restrictions
+
+⸻
+
+✅ Final Outcome:
+
+A fully interactive, modern, personalized workout generation system with:
+	•	Smart automation from onboarding
+	•	Swappable components
+	•	Data-driven recovery & targeting
+	•	Progress tracking
+	•	Engagement-based gamification
+
+⸻
+
+Let me know if you want this broken into modular prompt pieces, UI component code, or Supabase schema setups.
