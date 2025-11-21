@@ -141,7 +141,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   };
 
   return (
-    <div className="bg-zinc-900 rounded-2xl p-4 mb-4">
+    <div className="bg-zinc-900 rounded-xl p-3 mb-3">
       {/* Exercise Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -155,31 +155,31 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       {/* Sets Table */}
       <div className="space-y-2">
         {/* Table Header */}
-        <div className="grid grid-cols-[50px_90px_90px_90px_50px] gap-2 text-xs font-semibold text-zinc-500 px-2 items-center">
+        <div className="grid grid-cols-[40px_70px_1fr_70px_44px] gap-1 text-xs font-semibold text-zinc-500 px-2 items-center">
           <div>Set</div>
-          <div>Previous</div>
-          <div className="flex items-center gap-1">
-            <span>Weight</span>
+          <div className="text-center">Prev</div>
+          <div className="flex items-center justify-center gap-1">
             <button
               onClick={onWeightUnitToggle}
-              className="flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-800 hover:bg-zinc-700 rounded-full transition-colors"
+              className="flex items-center gap-0.5 px-1 py-0.5 bg-zinc-800 hover:bg-zinc-700 rounded-full transition-colors"
+              title="Toggle weight unit"
             >
-              <span className={`text-[10px] font-semibold transition-colors ${weightUnit === 'kg' ? 'text-green-500' : 'text-zinc-500'}`}>
+              <span className={`text-[9px] font-bold transition-colors ${weightUnit === 'kg' ? 'text-green-500' : 'text-zinc-600'}`}>
                 kg
               </span>
-              <div className="w-5 h-3 bg-zinc-700 rounded-full p-0.5 relative">
+              <div className="w-4 h-2.5 bg-zinc-700 rounded-full p-[2px] relative">
                 <div
-                  className={`w-2 h-2 bg-green-500 rounded-full transition-transform ${
-                    weightUnit === 'lbs' ? 'translate-x-2' : 'translate-x-0'
+                  className={`w-1.5 h-1.5 bg-green-500 rounded-full transition-transform ${
+                    weightUnit === 'lbs' ? 'translate-x-1.5' : 'translate-x-0'
                   }`}
                 />
               </div>
-              <span className={`text-[10px] font-semibold transition-colors ${weightUnit === 'lbs' ? 'text-green-500' : 'text-zinc-500'}`}>
-                lbs
+              <span className={`text-[9px] font-bold transition-colors ${weightUnit === 'lbs' ? 'text-green-500' : 'text-zinc-600'}`}>
+                lb
               </span>
             </button>
           </div>
-          <div>Reps</div>
+          <div className="text-center">Reps</div>
           <div></div>
         </div>
 
@@ -194,7 +194,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             <div
               key={set.setNumber}
               className={`
-                grid grid-cols-[50px_90px_90px_90px_50px] gap-2 items-center
+                grid grid-cols-[40px_70px_1fr_70px_44px] gap-1 items-center
                 p-2 rounded-lg transition-colors
                 ${set.isCompleted ? 'bg-green-500/10' : 'bg-zinc-800'}
               `}
@@ -205,9 +205,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               </div>
 
               {/* Previous */}
-              <div className="text-center text-sm text-zinc-400">
+              <div className="text-center text-xs text-zinc-400">
                 {previousDisplayWeight !== null ? (
-                  <span>{previousDisplayWeight} × {previous!.reps}</span>
+                  <div className="flex flex-col leading-tight">
+                    <span className="font-semibold text-white">{previousDisplayWeight}</span>
+                    <span className="text-[10px]">×{previous!.reps}</span>
+                  </div>
                 ) : (
                   <span className="text-zinc-600">-</span>
                 )}
@@ -226,7 +229,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                   disabled={set.isCompleted}
                   placeholder="0"
                   className={`
-                    w-full px-3 py-2 rounded-lg text-center font-semibold
+                    w-full px-2 py-2.5 rounded-lg text-center font-semibold text-sm
                     border-2 transition-all
                     ${set.isCompleted
                       ? 'bg-green-500/20 border-green-500/30 text-green-400 cursor-not-allowed'
@@ -248,7 +251,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                   disabled={set.isCompleted}
                   placeholder="0"
                   className={`
-                    w-full px-3 py-2 rounded-lg text-center font-semibold
+                    w-full px-2 py-2.5 rounded-lg text-center font-semibold text-sm
                     border-2 transition-all
                     ${set.isCompleted
                       ? 'bg-green-500/20 border-green-500/30 text-green-400 cursor-not-allowed'

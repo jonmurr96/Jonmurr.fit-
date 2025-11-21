@@ -245,8 +245,8 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-black text-white pb-32">
+      <div className="max-w-2xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button
@@ -292,21 +292,21 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
         </div>
 
         {/* Workout Info */}
-        <div className="bg-zinc-900 rounded-2xl p-4 mb-6">
+        <div className="bg-zinc-900 rounded-xl p-3 mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-zinc-400">Total Exercises</p>
-              <p className="text-2xl font-bold">{workout.exercises.length}</p>
+              <p className="text-xs text-zinc-400">Exercises</p>
+              <p className="text-xl font-bold">{workout.exercises.length}</p>
             </div>
             <div>
-              <p className="text-sm text-zinc-400">Total Sets</p>
-              <p className="text-2xl font-bold">
+              <p className="text-xs text-zinc-400">Total Sets</p>
+              <p className="text-xl font-bold">
                 {workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-zinc-400">Completed</p>
-              <p className="text-2xl font-bold text-green-500">
+              <p className="text-xs text-zinc-400">Completed</p>
+              <p className="text-xl font-bold text-green-500">
                 {sessionSets.filter(s => s.is_completed).length}
               </p>
             </div>
