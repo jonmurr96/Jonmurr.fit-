@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrainingProgram, Workout, WorkoutHistory } from '../types';
 import { ArrowLeftIcon } from '../components/Icons';
 import { WeekCalendar } from '../components/workout/WeekCalendar';
 import { ExerciseCard } from '../components/workout/ExerciseCard';
 import { createWorkoutSessionService, WorkoutSession, WorkoutSet as DBWorkoutSet, PreviousSetData } from '../services/workoutSessionService';
 import { createMuscleTrackingService } from '../services/muscleTrackingService';
+import { createGamificationService } from '../services/database/gamificationService';
 import { useAuth } from '../contexts/AuthContext';
 
 interface TrainScreenProps {
@@ -34,6 +35,8 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
 
   const workoutSessionService = user ? createWorkoutSessionService(user.id) : null;
   const muscleTrackingService = user ? createMuscleTrackingService(user.id) : null;
+  const gamificationService = user ? createGamificationService(user.id) : null;
+  const completedExercisesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user || !workoutSessionService) return;
@@ -49,6 +52,41 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
           const sets = await workoutSessionService.getSessionSets(existingSession.id);
           setSessionSets(sets);
 
+          const resumedWorkout = program?.workouts.find(w => w.id === existingSession.workout_id) || getTodaysWorkout();
+          if (resumedWorkout) {
+            setCurrentWorkout(resumedWorkout);
+          }
+
+          completedExercisesRef.current.clear();
+          
+          if (resumedWorkout) {
+            const uniqueExercises = [...new Set(sets.map(s => s.exercise_name))];
+            uniqueExercises.forEach(exerciseName => {
+              const exercise = resumedWorkout.exercises.find(e => e.name === exerciseName);
+              
+              if (exercise) {
+                const exerciseSets = sets.filter(s => s.exercise_name === exerciseName);
+                const targetSetCount = exercise.sets.length;
+                
+                const completedSetNumbers = new Set(
+                  exerciseSets.filter(s => s.is_completed).map(s => s.set_number)
+                );
+                
+                let allSetsCompleted = true;
+                for (let setNum = 1; setNum <= targetSetCount; setNum++) {
+                  if (!completedSetNumbers.has(setNum)) {
+                    allSetsCompleted = false;
+                    break;
+                  }
+                }
+                
+                if (allSetsCompleted) {
+                  completedExercisesRef.current.add(exerciseName);
+                }
+              }
+            });
+          }
+
           const exerciseNames = [...new Set(sets.map(s => s.exercise_name))];
           await loadPreviousSetsForExercises(exerciseNames, existingSession.id);
         } else if (program) {
@@ -61,6 +99,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
             );
             setActiveSession(newSession);
             setCurrentWorkout(todayWorkout);
+            completedExercisesRef.current.clear();
 
             const exerciseNames = todayWorkout.exercises.map(e => e.name);
             await loadPreviousSetsForExercises(exerciseNames, newSession.id);
@@ -108,7 +147,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
   };
 
   const handleSetComplete = async (exerciseName: string, setNumber: number, weightKg: number, reps: number) => {
-    if (!activeSession || !workoutSessionService) return;
+    if (!activeSession || !workoutSessionService || !gamificationService) return;
 
     try {
       const completedSet = await workoutSessionService.completeSet(
@@ -123,7 +162,41 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
         const filtered = prev.filter(
           s => !(s.exercise_name === exerciseName && s.set_number === setNumber)
         );
-        return [...filtered, completedSet];
+        const updatedSets = [...filtered, completedSet];
+
+        const exercise = workout?.exercises.find(e => e.name === exerciseName);
+        if (exercise) {
+          const exerciseSets = updatedSets.filter(s => s.exercise_name === exerciseName);
+          const targetSetCount = exercise.sets.length;
+          
+          const completedSetNumbers = new Set(
+            exerciseSets.filter(s => s.is_completed).map(s => s.set_number)
+          );
+          
+          let allSetsCompleted = true;
+          for (let setNum = 1; setNum <= targetSetCount; setNum++) {
+            if (!completedSetNumbers.has(setNum)) {
+              allSetsCompleted = false;
+              break;
+            }
+          }
+
+          if (allSetsCompleted && !completedExercisesRef.current.has(exerciseName)) {
+            completedExercisesRef.current.add(exerciseName);
+            
+            gamificationService.addXPWithTransaction(
+              50,
+              `Completed exercise: ${exerciseName}`,
+              'workout_exercise'
+            ).then(result => {
+              console.log(`🎉 +50 XP for completing ${exerciseName}!`, result);
+            }).catch(err => {
+              console.error('Error awarding XP:', err);
+            });
+          }
+        }
+
+        return updatedSets;
       });
     } catch (error) {
       console.error('Error completing set:', error);
@@ -175,6 +248,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
       setActiveSession(null);
       setSessionSets([]);
       setCurrentWorkout(null);
+      completedExercisesRef.current.clear();
 
       alert('Workout completed! Great job! 💪');
     } catch (error) {
@@ -234,6 +308,34 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
 
   const getPreviousSets = (exerciseName: string): PreviousSetData[] => {
     return previousSetsMap[exerciseName] || [];
+  };
+
+  const calculateCompletedExercises = (): number => {
+    if (!workout) return 0;
+    
+    let completedCount = 0;
+    workout.exercises.forEach(exercise => {
+      const exerciseSets = sessionSets.filter(s => s.exercise_name === exercise.name);
+      const targetSetCount = exercise.sets.length;
+      
+      const completedSetNumbers = new Set(
+        exerciseSets.filter(s => s.is_completed).map(s => s.set_number)
+      );
+      
+      let allSetsCompleted = true;
+      for (let setNum = 1; setNum <= targetSetCount; setNum++) {
+        if (!completedSetNumbers.has(setNum)) {
+          allSetsCompleted = false;
+          break;
+        }
+      }
+      
+      if (allSetsCompleted) {
+        completedCount++;
+      }
+    });
+    
+    return completedCount;
   };
 
   return (
@@ -299,7 +401,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
             <div>
               <p className="text-xs text-zinc-400">Completed</p>
               <p className="text-xl font-bold text-green-500">
-                {sessionSets.filter(s => s.is_completed).length}
+                {calculateCompletedExercises()}/{workout.exercises.length}
               </p>
             </div>
           </div>
