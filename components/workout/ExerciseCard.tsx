@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PreviousSetData, WorkoutSet } from '../../services/workoutSessionService';
-import { RestTimer } from './RestTimer';
+import { CompactRestTimer } from './CompactRestTimer';
 
 interface ExerciseSet {
   setNumber: number;
@@ -52,7 +52,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 }) => {
   const [sets, setSets] = useState<ExerciseSet[]>([]);
   const [editingSet, setEditingSet] = useState<number | null>(null);
-  const [showRestTimer, setShowRestTimer] = useState(false);
   const [restDuration, setRestDuration] = useState(defaultRestSeconds);
   const [restTimerKey, setRestTimerKey] = useState(0);
 
@@ -105,8 +104,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )
       );
 
-      // Auto-start rest timer
-      setShowRestTimer(true);
+      // Trigger rest timer restart
       setRestTimerKey(prev => prev + 1);
     } catch (error) {
       console.error('Error completing set:', error);
@@ -168,12 +166,19 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     <div className="bg-zinc-900 rounded-xl p-3 mb-3">
       {/* Exercise Header */}
       <div className="flex items-center justify-between mb-4">
-        <div>
+        <div className="flex-1">
           <h3 className="text-lg font-bold text-white">{exerciseName}</h3>
           <p className="text-sm text-zinc-400">
             {sets.filter(s => s.isCompleted).length} / {targetSets} sets completed
           </p>
         </div>
+        <CompactRestTimer
+          key={restTimerKey}
+          defaultDuration={restDuration}
+          onComplete={handleRestComplete}
+          autoStart={restTimerKey > 0}
+          onDurationChange={handleRestDurationChange}
+        />
       </div>
 
       {/* Sets Table */}
@@ -312,19 +317,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           );
         })}
       </div>
-
-      {/* Rest Timer */}
-      {showRestTimer && (
-        <div className="mt-3">
-          <RestTimer
-            key={restTimerKey}
-            defaultDuration={restDuration}
-            onComplete={handleRestComplete}
-            autoStart={true}
-            onDurationChange={handleRestDurationChange}
-          />
-        </div>
-      )}
 
       {/* Add Set Button */}
       <button
