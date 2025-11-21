@@ -30,6 +30,10 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
   const [restDuration, setRestDuration] = useState(45);
   const [isLoading, setIsLoading] = useState(true);
   const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
+  const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>(() => {
+    const saved = localStorage.getItem('weightUnit');
+    return (saved === 'lbs' ? 'lbs' : 'kg') as 'kg' | 'lbs';
+  });
 
   const workoutSessionService = user ? createWorkoutSessionService(user.id) : null;
   const muscleTrackingService = user ? createMuscleTrackingService(user.id) : null;
@@ -98,6 +102,12 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
 
     const workout = program.workouts.find(w => w.day === dayNumber);
     return workout || null;
+  };
+
+  const toggleWeightUnit = () => {
+    const newUnit = weightUnit === 'kg' ? 'lbs' : 'kg';
+    setWeightUnit(newUnit);
+    localStorage.setItem('weightUnit', newUnit);
   };
 
   const handleSetComplete = async (exerciseName: string, setNumber: number, weightKg: number, reps: number) => {
@@ -238,7 +248,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
     <div className="min-h-screen bg-black text-white pb-24">
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <button
             onClick={handleBack}
             className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
@@ -264,6 +274,28 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
             className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-zinc-800 disabled:text-zinc-600 rounded-lg font-semibold transition-colors"
           >
             Finish
+          </button>
+        </div>
+
+        {/* Unit Toggle */}
+        <div className="flex justify-center mb-6">
+          <button
+            onClick={toggleWeightUnit}
+            className="flex items-center gap-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition-colors"
+          >
+            <span className={`text-sm font-semibold transition-colors ${weightUnit === 'kg' ? 'text-green-500' : 'text-zinc-400'}`}>
+              kg
+            </span>
+            <div className="w-10 h-6 bg-zinc-700 rounded-full p-1 relative">
+              <div
+                className={`w-4 h-4 bg-green-500 rounded-full transition-transform ${
+                  weightUnit === 'lbs' ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </div>
+            <span className={`text-sm font-semibold transition-colors ${weightUnit === 'lbs' ? 'text-green-500' : 'text-zinc-400'}`}>
+              lbs
+            </span>
           </button>
         </div>
 
@@ -312,6 +344,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
               targetSets={exercise.sets.length}
               currentSets={getExerciseSets(exercise.name)}
               previousSets={getPreviousSets(exercise.name)}
+              weightUnit={weightUnit}
               onSetComplete={(setNumber, weightKg, reps) =>
                 handleSetComplete(exercise.name, setNumber, weightKg, reps)
               }

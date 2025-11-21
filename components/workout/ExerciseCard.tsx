@@ -13,16 +13,36 @@ interface ExerciseCardProps {
   targetSets: number;
   currentSets: WorkoutSet[];
   previousSets: PreviousSetData[];
+  weightUnit: 'kg' | 'lbs';
   onSetComplete: (setNumber: number, weightKg: number, reps: number) => Promise<void>;
   onSetUpdate: (setNumber: number, weightKg: number | null, reps: number | null) => void;
   onStartRestTimer: (duration: number) => void;
 }
+
+const KG_TO_LBS = 2.20462;
+const LBS_TO_KG = 1 / KG_TO_LBS;
+
+const convertWeight = (weightKg: number | null, toUnit: 'kg' | 'lbs'): number | null => {
+  if (weightKg === null) return null;
+  if (toUnit === 'lbs') {
+    return Math.round(weightKg * KG_TO_LBS * 10) / 10; // Round to 1 decimal
+  }
+  return Math.round(weightKg * 100) / 100; // Round kg to 2 decimals
+};
+
+const convertToKg = (weight: number, fromUnit: 'kg' | 'lbs'): number => {
+  if (fromUnit === 'lbs') {
+    return Math.round(weight * LBS_TO_KG * 100) / 100; // Round to 2 decimals
+  }
+  return weight;
+};
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exerciseName,
   targetSets,
   currentSets,
   previousSets,
+  weightUnit,
   onSetComplete,
   onSetUpdate,
   onStartRestTimer,
@@ -60,6 +80,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     }
 
     try {
+      // Weight is already in kg (stored internally), pass directly
       await onSetComplete(setNumber, set.weightKg, set.reps);
       
       // Update local state
@@ -78,7 +99,21 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   };
 
   const handleWeightChange = (setNumber: number, value: string) => {
-    const weightKg = value === '' ? null : parseFloat(value);
+    if (value === '') {
+      setSets(prev => {
+        const updatedSets = prev.map(s =>
+          s.setNumber === setNumber ? { ...s, weightKg: null } : s
+        );
+        const currentReps = updatedSets.find(s => s.setNumber === setNumber)?.reps ?? null;
+        onSetUpdate(setNumber, null, currentReps);
+        return updatedSets;
+      });
+      return;
+    }
+
+    const weightInDisplayUnit = parseFloat(value);
+    const weightKg = convertToKg(weightInDisplayUnit, weightUnit);
+    
     setSets(prev => {
       const updatedSets = prev.map(s =>
         s.setNumber === setNumber ? { ...s, weightKg } : s
@@ -121,7 +156,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         <div className="grid grid-cols-[50px_90px_90px_90px_50px] gap-2 text-xs font-semibold text-zinc-500 px-2">
           <div>Set</div>
           <div>Previous</div>
-          <div>Weight (kg)</div>
+          <div>Weight ({weightUnit})</div>
           <div>Reps</div>
           <div></div>
         </div>
@@ -130,6 +165,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         {sets.map((set) => {
           const previous = getPreviousSet(set.setNumber);
           const isEditing = editingSet === set.setNumber;
+          const displayWeight = convertWeight(set.weightKg, weightUnit);
+          const previousDisplayWeight = previous ? convertWeight(previous.weight_kg, weightUnit) : null;
 
           return (
             <div
@@ -147,8 +184,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
               {/* Previous */}
               <div className="text-center text-sm text-zinc-400">
-                {previous ? (
-                  <span>{previous.weight_kg} × {previous.reps}</span>
+                {previousDisplayWeight !== null ? (
+                  <span>{previousDisplayWeight} × {previous!.reps}</span>
                 ) : (
                   <span className="text-zinc-600">-</span>
                 )}
@@ -159,7 +196,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 <input
                   type="number"
                   inputMode="decimal"
-                  value={set.weightKg ?? ''}
+                  step={weightUnit === 'lbs' ? '5' : '2.5'}
+                  value={displayWeight ?? ''}
                   onChange={(e) => handleWeightChange(set.setNumber, e.target.value)}
                   onFocus={() => setEditingSet(set.setNumber)}
                   onBlur={() => setEditingSet(null)}
