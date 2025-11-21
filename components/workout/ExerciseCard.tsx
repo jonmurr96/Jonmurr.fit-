@@ -14,6 +14,7 @@ interface ExerciseCardProps {
   currentSets: WorkoutSet[];
   previousSets: PreviousSetData[];
   weightUnit: 'kg' | 'lbs';
+  onWeightUnitToggle: () => void;
   onSetComplete: (setNumber: number, weightKg: number, reps: number) => Promise<void>;
   onSetUpdate: (setNumber: number, weightKg: number | null, reps: number | null) => void;
   onStartRestTimer: (duration: number) => void;
@@ -43,6 +44,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   currentSets,
   previousSets,
   weightUnit,
+  onWeightUnitToggle,
   onSetComplete,
   onSetUpdate,
   onStartRestTimer,
@@ -153,10 +155,30 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       {/* Sets Table */}
       <div className="space-y-2">
         {/* Table Header */}
-        <div className="grid grid-cols-[50px_90px_90px_90px_50px] gap-2 text-xs font-semibold text-zinc-500 px-2">
+        <div className="grid grid-cols-[50px_90px_90px_90px_50px] gap-2 text-xs font-semibold text-zinc-500 px-2 items-center">
           <div>Set</div>
           <div>Previous</div>
-          <div>Weight ({weightUnit})</div>
+          <div className="flex items-center gap-1">
+            <span>Weight</span>
+            <button
+              onClick={onWeightUnitToggle}
+              className="flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-800 hover:bg-zinc-700 rounded-full transition-colors"
+            >
+              <span className={`text-[10px] font-semibold transition-colors ${weightUnit === 'kg' ? 'text-green-500' : 'text-zinc-500'}`}>
+                kg
+              </span>
+              <div className="w-5 h-3 bg-zinc-700 rounded-full p-0.5 relative">
+                <div
+                  className={`w-2 h-2 bg-green-500 rounded-full transition-transform ${
+                    weightUnit === 'lbs' ? 'translate-x-2' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+              <span className={`text-[10px] font-semibold transition-colors ${weightUnit === 'lbs' ? 'text-green-500' : 'text-zinc-500'}`}>
+                lbs
+              </span>
+            </button>
+          </div>
           <div>Reps</div>
           <div></div>
         </div>
