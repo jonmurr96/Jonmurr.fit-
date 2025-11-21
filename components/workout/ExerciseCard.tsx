@@ -79,22 +79,28 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
   const handleWeightChange = (setNumber: number, value: string) => {
     const weightKg = value === '' ? null : parseFloat(value);
-    setSets(prev =>
-      prev.map(s =>
+    setSets(prev => {
+      const updatedSets = prev.map(s =>
         s.setNumber === setNumber ? { ...s, weightKg } : s
-      )
-    );
-    onSetUpdate(setNumber, weightKg, sets.find(s => s.setNumber === setNumber)?.reps ?? null);
+      );
+      // Get fresh reps value from updated state
+      const currentReps = updatedSets.find(s => s.setNumber === setNumber)?.reps ?? null;
+      onSetUpdate(setNumber, weightKg, currentReps);
+      return updatedSets;
+    });
   };
 
   const handleRepsChange = (setNumber: number, value: string) => {
     const reps = value === '' ? null : parseInt(value, 10);
-    setSets(prev =>
-      prev.map(s =>
+    setSets(prev => {
+      const updatedSets = prev.map(s =>
         s.setNumber === setNumber ? { ...s, reps } : s
-      )
-    );
-    onSetUpdate(setNumber, sets.find(s => s.setNumber === setNumber)?.weightKg ?? null, reps);
+      );
+      // Get fresh weight value from updated state
+      const currentWeight = updatedSets.find(s => s.setNumber === setNumber)?.weightKg ?? null;
+      onSetUpdate(setNumber, currentWeight, reps);
+      return updatedSets;
+    });
   };
 
   return (

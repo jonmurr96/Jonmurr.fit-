@@ -5,7 +5,7 @@
 -- Tracks individual workout sessions with start/end times
 CREATE TABLE IF NOT EXISTS workout_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     workout_id UUID,
     workout_name TEXT NOT NULL,
     workout_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
 -- Tracks individual sets within a workout session
 CREATE TABLE IF NOT EXISTS workout_sets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     session_id UUID NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
     exercise_name TEXT NOT NULL,
     set_number INTEGER NOT NULL,
@@ -56,13 +56,13 @@ ALTER TABLE workout_sets ENABLE ROW LEVEL SECURITY;
 -- RLS Policies: Users can only access their own data
 CREATE POLICY workout_sessions_user_policy ON workout_sessions
     FOR ALL
-    USING (user_id = auth.uid()::text)
-    WITH CHECK (user_id = auth.uid()::text);
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY workout_sets_user_policy ON workout_sets
     FOR ALL
-    USING (user_id = auth.uid()::text)
-    WITH CHECK (user_id = auth.uid()::text);
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
 
 -- Function to auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_workout_timestamp()
@@ -88,7 +88,7 @@ CREATE TRIGGER update_workout_sets_timestamp_trigger
 
 -- Helper function to get previous workout data for an exercise
 CREATE OR REPLACE FUNCTION get_previous_workout_sets(
-    p_user_id TEXT,
+    p_user_id UUID,
     p_exercise_name TEXT,
     p_current_session_id UUID DEFAULT NULL
 )
@@ -100,7 +100,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     -- Security: Validate user_id matches authenticated user
-    IF p_user_id != auth.uid()::text THEN
+    IF p_user_id != auth.uid() THEN
         RAISE EXCEPTION 'Unauthorized: Cannot access workout data for other users';
     END IF;
     
@@ -124,7 +124,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Helper function to complete a workout session
 CREATE OR REPLACE FUNCTION complete_workout_session(
-    p_user_id TEXT,
+    p_user_id UUID,
     p_session_id UUID
 )
 RETURNS workout_sessions AS $$
@@ -133,7 +133,7 @@ DECLARE
     session_start TIMESTAMPTZ;
 BEGIN
     -- Security: Validate user_id matches authenticated user
-    IF p_user_id != auth.uid()::text THEN
+    IF p_user_id != auth.uid() THEN
         RAISE EXCEPTION 'Unauthorized: Cannot complete workout session for other users';
     END IF;
     

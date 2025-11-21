@@ -102,7 +102,8 @@ export const createWorkoutSessionService = (userId: string) => {
     setNumber: number,
     weightKg: number | null = null,
     reps: number | null = null,
-    isCompleted: boolean = false
+    isCompleted: boolean = false,
+    restSeconds: number | null = null
   ): Promise<WorkoutSet> => {
     try {
       const setData: any = {
@@ -113,6 +114,7 @@ export const createWorkoutSessionService = (userId: string) => {
         weight_kg: weightKg,
         reps: reps,
         is_completed: isCompleted,
+        rest_seconds: restSeconds,
       };
 
       if (isCompleted) {
@@ -146,7 +148,7 @@ export const createWorkoutSessionService = (userId: string) => {
     reps: number,
     restSeconds: number | null = null
   ): Promise<WorkoutSet> => {
-    return upsertSet(sessionId, exerciseName, setNumber, weightKg, reps, true);
+    return upsertSet(sessionId, exerciseName, setNumber, weightKg, reps, true, restSeconds);
   };
 
   /**
