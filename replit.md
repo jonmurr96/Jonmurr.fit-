@@ -26,7 +26,7 @@ The application features a modern, engaging design with a focus on gamification,
 ### Feature Specifications
 - **Daily Macro Tracking**: Users can log and track calories, protein, carbohydrates, and fats.
 - **AI-Powered Planning**: Generation of personalized workout routines and meal plans during onboarding with parallel AI generation.
-- **Manual Meal Plan Builder**: Users can create custom meal plans from scratch using the 60-food catalog, with category browsing, search, real-time macro calculations, and serving size adjustments.
+- **Manual Meal Plan Builder**: Users can create custom meal plans from scratch using the 60-food catalog, with category browsing, search, real-time macro calculations, and dynamic serving size system supporting multiple units (g, oz, cups, tbsp, tsp, ml) with smart presets and inline editing.
 - **Food Swap Catalog System**: Interactive meal plan customization with a curated catalog of 60 foods, real-time food swapping with automatic macro recalculation, category-based filtering, search, and favorites management.
 - **Progress Visualization**: Charts, graphs, and heat maps to track fitness journey and achievements.
 - **Workout Management**: Users can save, organize by status, and set active workout plans.
@@ -43,6 +43,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **AuthContext Provider**: Manages session, token refresh, and profile loading.
 - **Database Service Architecture**: All 8 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement.
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods, including nutritional data and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations.
+- **Dynamic Serving Size System**: Comprehensive unit conversion system with ServingSizeSelector component supporting weight (g, oz) and volume (cups, tbsp, tsp, ml) units. Features density-based conversions (liquids default to volume, solids to weight), smart preset buttons (25g, 50g, 100g, 200g, 1/4 cup, 1/2 cup, 1 cup), and real-time macro recalculation. Users can adjust serving sizes both during initial food selection (FoodCard) and after adding to plan (PlanPreview inline editor).
 
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.
