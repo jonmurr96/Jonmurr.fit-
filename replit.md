@@ -16,7 +16,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **AI Integration**: Google Gemini API (gemini-2.5-pro for workouts, gemini-2.5-flash for meals) for workout and meal plan generation, optimized for single API calls and precise macro targeting.
 - **Styling**: Tailwind CSS for rapid and consistent styling.
 - **Charts**: Recharts library for data visualization.
-- **Database**: Supabase for backend, managing user data, workout logs, meal entries, and gamification state across 23 tables, including daily activity summary for heat map tracking.
+- **Database**: Supabase for backend, managing user data, workout logs, meal entries, and gamification state across 25 tables, including daily activity summary for heat map tracking, workout_sessions for real-time workout tracking, and workout_sets for set-by-set logging.
 - **Authentication**: Supabase Auth for email/password and OAuth (Google/Apple) flows, session management, and protected routes with Row Level Security (RLS).
 - **Workout Status System**: Implements 'active', 'inactive', 'draft' statuses for workouts, enforcing a single active plan rule.
 - **Gamification System**: Features tiered badge progression across 8 categories, a 100-level system with exponential XP curve, a loot/rewards system with mystery chests, and a challenge system. XP is triggered by workouts, meals, water tracking, and AI usage.
@@ -30,6 +30,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Manual Meal Plan Builder**: Users can create custom meal plans from scratch using the 60-food catalog, with category browsing, search, real-time macro calculations, and dynamic serving size system supporting multiple units (g, oz, cups, tbsp, tsp, ml) with smart presets and inline editing.
 - **Food Swap Catalog System**: Interactive meal plan customization with a curated catalog of 60 foods, real-time food swapping with automatic macro recalculation, category-based filtering, search, and favorites management.
 - **Progress Visualization**: Charts, graphs, and heat maps to track fitness journey and achievements.
+- **Workout Session Tracking**: Real-time workout tracking with set-by-set logging, previous workout data display, rest timer with circular progress, and automatic muscle engagement detection. Features horizontal week calendar, mobile-optimized table layout (Set | Previous | Weight | Reps | ✓), and Supabase sync for all workout data.
 - **Workout Management**: Users can save, organize by status, and set active workout plans.
 - **Health Checks**: An integrated health check system detects missing Supabase tables and guides users through schema application.
 - **User Authentication**: Secure sign-up, sign-in, password reset, profile management, and onboarding for fitness goals.
@@ -43,10 +44,11 @@ The application features a modern, engaging design with a focus on gamification,
 - **Modular Component Architecture**: UI is built with reusable components for maintainability.
 - **Auth Service Layer**: Dedicated service for all authentication and user profile operations.
 - **AuthContext Provider**: Manages session, token refresh, and profile loading.
-- **Database Service Architecture**: All 8 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement.
+- **Database Service Architecture**: All 9 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement.
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods, including nutritional data and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations.
 - **Dynamic Serving Size System**: Comprehensive unit conversion system with ServingSizeSelector component supporting weight (g, oz) and volume (cups, tbsp, tsp, ml) units. Features density-based conversions (liquids default to volume, solids to weight), smart preset buttons (25g, 50g, 100g, 200g, 1/4 cup, 1/2 cup, 1 cup), and real-time macro recalculation. Users can adjust serving sizes both during initial food selection (FoodCard) and after adding to plan (PlanPreview inline editor).
 - **Muscle Recovery Tracking Service**: Database service layer (`muscleTrackingService.ts`) with factory pattern for muscle engagement tracking, automatic muscle detection from exercises using exercise-to-muscle mapping, recovery status queries, and muscle history analytics. Includes 58 SVG muscle anatomy assets (front/back views) organized in `public/assets/anatomy/`.
+- **Workout Session Service**: Real-time workout tracking service (`workoutSessionService.ts`) with factory pattern for session management, set tracking, previous workout data fetching, and session completion. Integrates with muscle tracking to auto-detect engaged muscles on workout completion.
 
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.
