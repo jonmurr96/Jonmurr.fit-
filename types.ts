@@ -262,6 +262,7 @@ export interface MealPlanItem {
     carbs: number;
     fat: number;
     catalogFoodId?: number;
+    servingSize?: { amount: number; unit: string }; // For potential editing later
 }
 
 export interface PlannedMeal {

@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FoodItem as CatalogFoodItem } from '../../services/database/foodCatalogService';
 import { SimplifiedFood } from '../../services/usdaFoodService';
+import { ServingSizeSelector } from './ServingSizeSelector';
+import { ServingSize, calculateMacrosForServing, getRecommendedUnits } from '../../utils/unitConversion';
 
 interface FoodCardProps {
   food: CatalogFoodItem | SimplifiedFood;
   isFavorite: boolean;
   isBlacklisted: boolean;
   isUSDA: boolean;
-  onAdd: (food: CatalogFoodItem | SimplifiedFood) => void;
+  onAdd: (food: CatalogFoodItem | SimplifiedFood, servingSize: ServingSize) => void;
   onToggleFavorite?: (foodId: number) => void;
   onToggleHide?: (foodId: number, isCurrentlyHidden: boolean) => void;
 }
@@ -21,11 +23,34 @@ export const FoodCard: React.FC<FoodCardProps> = ({
   onToggleFavorite,
   onToggleHide,
 }) => {
-  const protein = ('protein_g' in food) ? food.protein_g : food.protein;
-  const carbs = ('carbs_g' in food) ? food.carbs_g : food.carbs;
-  const fat = ('fat_g' in food) ? food.fat_g : food.fat;
-  const servingSize = ('serving_size' in food) ? food.serving_size : food.servingSize;
-  const servingUnit = ('serving_unit' in food) ? food.serving_unit : food.servingUnit;
+  // Base macros (per 100g from database)
+  const baseProtein = ('protein_g' in food) ? food.protein_g : food.protein;
+  const baseCarbs = ('carbs_g' in food) ? food.carbs_g : food.carbs;
+  const baseFat = ('fat_g' in food) ? food.fat_g : food.fat;
+  const baseCalories = food.calories;
+  
+  // Get recommended unit based on food type
+  const recommendedUnits = getRecommendedUnits(food.name);
+  
+  // Serving size state (default to recommended unit with 100 amount)
+  const [servingSize, setServingSize] = useState<ServingSize>({
+    amount: 100,
+    unit: recommendedUnits.primary,
+  });
+  
+  const [showServingSelector, setShowServingSelector] = useState(false);
+  
+  // Calculate macros for current serving size
+  const displayMacros = calculateMacrosForServing(
+    { calories: baseCalories, protein: baseProtein, carbs: baseCarbs, fat: baseFat },
+    servingSize,
+    food.name
+  );
+  
+  const handleAddFood = () => {
+    onAdd(food, servingSize);
+    setShowServingSelector(false); // Close selector after adding
+  };
 
   return (
     <div className="bg-zinc-800 rounded-lg p-4 hover:bg-zinc-750 transition-all border border-zinc-700 hover:border-zinc-600">
@@ -40,35 +65,49 @@ export const FoodCard: React.FC<FoodCardProps> = ({
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-400">
-            {Math.round(servingSize)}{servingUnit}
-          </p>
+          <button
+            onClick={() => setShowServingSelector(!showServingSelector)}
+            className="text-xs text-zinc-400 hover:text-green-400 transition-colors underline"
+          >
+            {servingSize.amount % 1 === 0 ? servingSize.amount : servingSize.amount.toFixed(1)}{servingSize.unit} serving
+          </button>
         </div>
         
         <div className="text-right flex-shrink-0">
-          <p className="text-lg font-bold text-white">{Math.round(food.calories)}</p>
+          <p className="text-lg font-bold text-white">{displayMacros.calories}</p>
           <p className="text-xs text-zinc-500">kcal</p>
         </div>
       </div>
 
+      {/* Serving Size Selector (collapsible) */}
+      {showServingSelector && (
+        <div className="mb-3 p-3 bg-zinc-900 rounded-lg border border-zinc-700">
+          <ServingSizeSelector
+            value={servingSize}
+            onChange={setServingSize}
+            foodDescription={food.name}
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
         <div className="bg-red-600/20 rounded px-2 py-1 text-center">
-          <p className="text-red-400 font-semibold">{Math.round(protein)}g</p>
+          <p className="text-red-400 font-semibold">{displayMacros.protein}g</p>
           <p className="text-zinc-500">P</p>
         </div>
         <div className="bg-blue-600/20 rounded px-2 py-1 text-center">
-          <p className="text-blue-400 font-semibold">{Math.round(carbs)}g</p>
+          <p className="text-blue-400 font-semibold">{displayMacros.carbs}g</p>
           <p className="text-zinc-500">C</p>
         </div>
         <div className="bg-yellow-600/20 rounded px-2 py-1 text-center">
-          <p className="text-yellow-400 font-semibold">{Math.round(fat)}g</p>
+          <p className="text-yellow-400 font-semibold">{displayMacros.fat}g</p>
           <p className="text-zinc-500">F</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => onAdd(food)}
+          onClick={handleAddFood}
           className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
         >
           + Add

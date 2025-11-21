@@ -9,6 +9,7 @@ import { MacroSummaryCard } from './meal-builder/MacroSummaryCard';
 import { FoodCard } from './meal-builder/FoodCard';
 import { SearchBar } from './meal-builder/SearchBar';
 import { PlanPreview } from './meal-builder/PlanPreview';
+import { ServingSize, calculateMacrosForServing, formatServingSize } from '../utils/unitConversion';
 
 interface ManualMealPlanBuilderProps {
   onClose: () => void;
@@ -226,22 +227,29 @@ export const ManualMealPlanBuilderV2: React.FC<ManualMealPlanBuilderProps> = ({ 
   const totalItems = meals.reduce((sum, meal) => sum + meal.items.length, 0);
 
   // Food management handlers
-  const handleAddFood = (food: CatalogFoodItem | SimplifiedFood) => {
-
-    const servingSize = ('serving_size' in food) ? food.serving_size : food.servingSize;
-    const servingUnit = ('serving_unit' in food) ? food.serving_unit : food.servingUnit;
-    const protein = ('protein_g' in food) ? food.protein_g : food.protein;
-    const carbs = ('carbs_g' in food) ? food.carbs_g : food.carbs;
-    const fat = ('fat_g' in food) ? food.fat_g : food.fat;
+  const handleAddFood = (food: CatalogFoodItem | SimplifiedFood, servingSize: ServingSize) => {
+    // Base macros (per 100g from database)
+    const baseProtein = ('protein_g' in food) ? food.protein_g : food.protein;
+    const baseCarbs = ('carbs_g' in food) ? food.carbs_g : food.carbs;
+    const baseFat = ('fat_g' in food) ? food.fat_g : food.fat;
+    const baseCalories = food.calories;
+    
+    // Calculate macros for the selected serving size
+    const adjustedMacros = calculateMacrosForServing(
+      { calories: baseCalories, protein: baseProtein, carbs: baseCarbs, fat: baseFat },
+      servingSize,
+      food.name
+    );
     
     const mealItem: MealPlanItem = {
       food: food.name,
-      quantity: `${servingSize}${servingUnit}`,
-      calories: food.calories,
-      protein,
-      carbs,
-      fat,
+      quantity: formatServingSize(servingSize),
+      calories: adjustedMacros.calories,
+      protein: adjustedMacros.protein,
+      carbs: adjustedMacros.carbs,
+      fat: adjustedMacros.fat,
       catalogFoodId: 'source' in food && food.source === 'usda' ? undefined : food.id,
+      servingSize: servingSize, // Store the serving size for potential editing later
     };
 
     setMeals(prev => {
