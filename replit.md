@@ -22,6 +22,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Gamification System**: Features tiered badge progression across 8 categories, a 100-level system with exponential XP curve, a loot/rewards system with mystery chests, and a challenge system. XP is triggered by workouts, meals, water tracking, and AI usage.
 - **Heat Map System**: Daily activity tracking with a 6-tier color-coding system visualized in MiniHeatMap (14-day strip) and FullHeatMap (monthly calendar) components, with a DayDetailModal for detailed daily activity breakdown.
 - **Onboarding System**: Comprehensive 5-step personalized onboarding flow with scientific calculations (BMR, TDEE, macros, water intake) and database integration for storing responses.
+- **Muscle Tracking System**: Interactive muscle recovery visualization with 13 tracked muscle groups, 4-tier color-coded recovery status (fresh, recovering, trained, stale), auto-detection from workout exercises, and database integration via `workout_muscle_engagement` table.
 
 ### Feature Specifications
 - **Daily Macro Tracking**: Users can log and track calories, protein, carbohydrates, and fats.
@@ -33,6 +34,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Health Checks**: An integrated health check system detects missing Supabase tables and guides users through schema application.
 - **User Authentication**: Secure sign-up, sign-in, password reset, profile management, and onboarding for fitness goals.
 - **Settings/Profile Management**: Full-featured profile and account management including updating user profile, password, and account deletion.
+- **Muscle Recovery Heatmap**: Visual recovery tracking for 13 muscle groups with MuscleGroupSelector component showing color-coded recovery status, clickable muscle details, and support for both recovery viewing and target muscle selection modes.
 
 ### System Design Choices
 - **Client-Side AI Calls**: Direct API calls to Google's Gemini service from the browser.
@@ -44,6 +46,7 @@ The application features a modern, engaging design with a focus on gamification,
 - **Database Service Architecture**: All 8 database services use a factory pattern (`createXService(userId)`) with closure-based functions for multi-user support and Row Level Security (RLS) enforcement.
 - **Food Catalog System**: Implements a curated food database (`food_catalog` table) with 60 foods, including nutritional data and tags. User preferences (`user_food_preferences` table) track favorites, blacklisted items, and swap history for personalized recommendations.
 - **Dynamic Serving Size System**: Comprehensive unit conversion system with ServingSizeSelector component supporting weight (g, oz) and volume (cups, tbsp, tsp, ml) units. Features density-based conversions (liquids default to volume, solids to weight), smart preset buttons (25g, 50g, 100g, 200g, 1/4 cup, 1/2 cup, 1 cup), and real-time macro recalculation. Users can adjust serving sizes both during initial food selection (FoodCard) and after adding to plan (PlanPreview inline editor).
+- **Muscle Recovery Tracking Service**: Database service layer (`muscleTrackingService.ts`) with factory pattern for muscle engagement tracking, automatic muscle detection from exercises using exercise-to-muscle mapping, recovery status queries, and muscle history analytics. Includes 58 SVG muscle anatomy assets (front/back views) organized in `public/assets/anatomy/`.
 
 ## External Dependencies
 - **Google Gemini API**: Used for AI-driven workout and meal plan generation.
