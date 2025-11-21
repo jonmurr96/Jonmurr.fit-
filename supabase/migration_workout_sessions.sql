@@ -1,0 +1,161 @@
+-- Migration: Workout Sessions and Set Tracking
+-- Creates tables for real-time workout session tracking with set-by-set logging
+
+-- Table: workout_sessions
+-- Tracks individual workout sessions with start/end times
+CREATE TABLE IF NOT EXISTS workout_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    workout_id UUID,
+    workout_name TEXT NOT NULL,
+    workout_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_time TIMESTAMPTZ,
+    duration_seconds INTEGER,
+    notes TEXT,
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Table: workout_sets
+-- Tracks individual sets within a workout session
+CREATE TABLE IF NOT EXISTS workout_sets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    session_id UUID NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    exercise_name TEXT NOT NULL,
+    set_number INTEGER NOT NULL,
+    weight_kg DECIMAL(6, 2),
+    reps INTEGER,
+    rest_seconds INTEGER,
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(session_id, exercise_name, set_number)
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_date 
+    ON workout_sessions(user_id, workout_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_completed 
+    ON workout_sessions(user_id, is_completed, workout_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_workout_sets_session 
+    ON workout_sets(session_id, exercise_name, set_number);
+
+CREATE INDEX IF NOT EXISTS idx_workout_sets_user_exercise 
+    ON workout_sets(user_id, exercise_name, completed_at DESC);
+
+-- Enable RLS
+ALTER TABLE workout_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workout_sets ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies: Users can only access their own data
+CREATE POLICY workout_sessions_user_policy ON workout_sessions
+    FOR ALL
+    USING (user_id = auth.uid()::text)
+    WITH CHECK (user_id = auth.uid()::text);
+
+CREATE POLICY workout_sets_user_policy ON workout_sets
+    FOR ALL
+    USING (user_id = auth.uid()::text)
+    WITH CHECK (user_id = auth.uid()::text);
+
+-- Function to auto-update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_workout_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers for auto-updating timestamps
+DROP TRIGGER IF EXISTS update_workout_sessions_timestamp_trigger ON workout_sessions;
+CREATE TRIGGER update_workout_sessions_timestamp_trigger
+    BEFORE UPDATE ON workout_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_workout_timestamp();
+
+DROP TRIGGER IF EXISTS update_workout_sets_timestamp_trigger ON workout_sets;
+CREATE TRIGGER update_workout_sets_timestamp_trigger
+    BEFORE UPDATE ON workout_sets
+    FOR EACH ROW
+    EXECUTE FUNCTION update_workout_timestamp();
+
+-- Helper function to get previous workout data for an exercise
+CREATE OR REPLACE FUNCTION get_previous_workout_sets(
+    p_user_id TEXT,
+    p_exercise_name TEXT,
+    p_current_session_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+    set_number INTEGER,
+    weight_kg DECIMAL,
+    reps INTEGER,
+    workout_date DATE
+) AS $$
+BEGIN
+    -- Security: Validate user_id matches authenticated user
+    IF p_user_id != auth.uid()::text THEN
+        RAISE EXCEPTION 'Unauthorized: Cannot access workout data for other users';
+    END IF;
+    
+    RETURN QUERY
+    SELECT 
+        ws.set_number,
+        ws.weight_kg,
+        ws.reps,
+        wses.workout_date
+    FROM workout_sets ws
+    JOIN workout_sessions wses ON ws.session_id = wses.id
+    WHERE ws.user_id = p_user_id
+      AND ws.exercise_name = p_exercise_name
+      AND ws.is_completed = TRUE
+      AND wses.is_completed = TRUE
+      AND (p_current_session_id IS NULL OR wses.id != p_current_session_id)
+    ORDER BY wses.workout_date DESC, ws.set_number ASC
+    LIMIT 10;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function to complete a workout session
+CREATE OR REPLACE FUNCTION complete_workout_session(
+    p_user_id TEXT,
+    p_session_id UUID
+)
+RETURNS workout_sessions AS $$
+DECLARE
+    session_result workout_sessions;
+    session_start TIMESTAMPTZ;
+BEGIN
+    -- Security: Validate user_id matches authenticated user
+    IF p_user_id != auth.uid()::text THEN
+        RAISE EXCEPTION 'Unauthorized: Cannot complete workout session for other users';
+    END IF;
+    
+    -- Get session start time
+    SELECT start_time INTO session_start
+    FROM workout_sessions
+    WHERE id = p_session_id AND user_id = p_user_id;
+    
+    IF session_start IS NULL THEN
+        RAISE EXCEPTION 'Session not found or access denied';
+    END IF;
+    
+    -- Update session with end time and duration
+    UPDATE workout_sessions
+    SET 
+        is_completed = TRUE,
+        end_time = NOW(),
+        duration_seconds = EXTRACT(EPOCH FROM (NOW() - session_start))::INTEGER,
+        updated_at = NOW()
+    WHERE id = p_session_id AND user_id = p_user_id
+    RETURNING * INTO session_result;
+    
+    RETURN session_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
