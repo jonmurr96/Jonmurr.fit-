@@ -13,6 +13,7 @@ interface TrainScreenProps {
   setProgram: React.Dispatch<React.SetStateAction<TrainingProgram | null>>;
   completeWorkout: (workout: Workout) => void;
   workoutHistory: WorkoutHistory;
+  setActiveScreen: (screen: string) => void;
 }
 
 export const TrainScreen: React.FC<TrainScreenProps> = ({
@@ -20,6 +21,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
   setProgram,
   completeWorkout,
   workoutHistory,
+  setActiveScreen,
 }) => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -44,51 +46,141 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
     const initializeWorkout = async () => {
       try {
         setIsLoading(true);
+        
+        if (!program) {
+          setIsLoading(false);
+          return;
+        }
 
         const existingSession = await workoutSessionService.getActiveSession();
 
         if (existingSession) {
-          setActiveSession(existingSession);
-          const sets = await workoutSessionService.getSessionSets(existingSession.id);
-          setSessionSets(sets);
-
-          const resumedWorkout = program?.workouts.find(w => w.id === existingSession.workout_id) || getTodaysWorkout();
-          if (resumedWorkout) {
-            setCurrentWorkout(resumedWorkout);
-          }
-
-          completedExercisesRef.current.clear();
+          const sessionDate = new Date(existingSession.workout_date);
+          const selectedDateStr = selectedDate.toISOString().split('T')[0];
+          const sessionDateStr = sessionDate.toISOString().split('T')[0];
           
-          if (resumedWorkout) {
-            const uniqueExercises = [...new Set(sets.map(s => s.exercise_name))];
-            uniqueExercises.forEach(exerciseName => {
-              const exercise = resumedWorkout.exercises.find(e => e.name === exerciseName);
-              
-              if (exercise) {
-                const exerciseSets = sets.filter(s => s.exercise_name === exerciseName);
-                const targetSetCount = exercise.sets.length;
+          if (selectedDateStr !== sessionDateStr) {
+            const newDayWorkout = getTodaysWorkout();
+            
+            if (!newDayWorkout) {
+              alert(`No workout scheduled for ${selectedDateStr}. Returning to your active session.`);
+              setSelectedDate(sessionDate);
+              setIsLoading(false);
+              return;
+            }
+            
+            const confirmSwitch = window.confirm(
+              `You have an active workout session for ${sessionDateStr}. Would you like to finish that session and start "${newDayWorkout.focus}" for ${selectedDateStr}?`
+            );
+            
+            if (!confirmSwitch) {
+              setSelectedDate(sessionDate);
+            }
+            
+            setActiveSession(existingSession);
+            const sets = await workoutSessionService.getSessionSets(existingSession.id);
+            setSessionSets(sets);
+
+            const resumedWorkout = program?.workouts.find(w => w.id === existingSession.workout_id);
+            if (resumedWorkout) {
+              setCurrentWorkout(resumedWorkout);
+            }
+
+            completedExercisesRef.current.clear();
+            
+            if (resumedWorkout) {
+              const uniqueExercises = [...new Set(sets.map(s => s.exercise_name))];
+              uniqueExercises.forEach(exerciseName => {
+                const exercise = resumedWorkout.exercises.find(e => e.name === exerciseName);
                 
-                const completedSetNumbers = new Set(
-                  exerciseSets.filter(s => s.is_completed).map(s => s.set_number)
-                );
-                
-                let allSetsCompleted = true;
-                for (let setNum = 1; setNum <= targetSetCount; setNum++) {
-                  if (!completedSetNumbers.has(setNum)) {
-                    allSetsCompleted = false;
-                    break;
+                if (exercise) {
+                  const exerciseSets = sets.filter(s => s.exercise_name === exerciseName);
+                  const targetSetCount = exercise.sets.length;
+                  
+                  const completedSetNumbers = new Set(
+                    exerciseSets.filter(s => s.is_completed).map(s => s.set_number)
+                  );
+                  
+                  let allSetsCompleted = true;
+                  for (let setNum = 1; setNum <= targetSetCount; setNum++) {
+                    if (!completedSetNumbers.has(setNum)) {
+                      allSetsCompleted = false;
+                      break;
+                    }
+                  }
+                  
+                  if (allSetsCompleted) {
+                    completedExercisesRef.current.add(exerciseName);
                   }
                 }
-                
-                if (allSetsCompleted) {
-                  completedExercisesRef.current.add(exerciseName);
-                }
-              }
-            });
-          }
+              });
+            }
 
-          const exerciseNames = [...new Set(sets.map(s => s.exercise_name))];
-          await loadPreviousSetsForExercises(exerciseNames, existingSession.id);
+            const exerciseNames = [...new Set(sets.map(s => s.exercise_name))];
+            await loadPreviousSetsForExercises(exerciseNames, existingSession.id);
+            
+            if (!confirmSwitch) {
+              setIsLoading(false);
+              return;
+            }
+            
+            await workoutSessionService.completeSession(existingSession.id);
+            const newSession = await workoutSessionService.startSession(
+              newDayWorkout.focus,
+              newDayWorkout.id,
+              selectedDate.toISOString().split('T')[0]
+            );
+            const newSets = await workoutSessionService.getSessionSets(newSession.id);
+            setActiveSession(newSession);
+            setSessionSets(newSets);
+            setCurrentWorkout(newDayWorkout);
+            completedExercisesRef.current.clear();
+
+            const newExerciseNames = newDayWorkout.exercises.map(e => e.name);
+            await loadPreviousSetsForExercises(newExerciseNames, newSession.id);
+          } else {
+            setActiveSession(existingSession);
+            const sets = await workoutSessionService.getSessionSets(existingSession.id);
+            setSessionSets(sets);
+
+            const resumedWorkout = program?.workouts.find(w => w.id === existingSession.workout_id) || getTodaysWorkout();
+            if (resumedWorkout) {
+              setCurrentWorkout(resumedWorkout);
+            }
+
+            completedExercisesRef.current.clear();
+            
+            if (resumedWorkout) {
+              const uniqueExercises = [...new Set(sets.map(s => s.exercise_name))];
+              uniqueExercises.forEach(exerciseName => {
+                const exercise = resumedWorkout.exercises.find(e => e.name === exerciseName);
+                
+                if (exercise) {
+                  const exerciseSets = sets.filter(s => s.exercise_name === exerciseName);
+                  const targetSetCount = exercise.sets.length;
+                  
+                  const completedSetNumbers = new Set(
+                    exerciseSets.filter(s => s.is_completed).map(s => s.set_number)
+                  );
+                  
+                  let allSetsCompleted = true;
+                  for (let setNum = 1; setNum <= targetSetCount; setNum++) {
+                    if (!completedSetNumbers.has(setNum)) {
+                      allSetsCompleted = false;
+                      break;
+                    }
+                  }
+                  
+                  if (allSetsCompleted) {
+                    completedExercisesRef.current.add(exerciseName);
+                  }
+                }
+              });
+            }
+
+            const exerciseNames = [...new Set(sets.map(s => s.exercise_name))];
+            await loadPreviousSetsForExercises(exerciseNames, existingSession.id);
+          }
         } else if (program) {
           const todayWorkout = getTodaysWorkout();
           if (todayWorkout) {
@@ -97,7 +189,9 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
               todayWorkout.id,
               selectedDate.toISOString().split('T')[0]
             );
+            const newSets = await workoutSessionService.getSessionSets(newSession.id);
             setActiveSession(newSession);
+            setSessionSets(newSets);
             setCurrentWorkout(todayWorkout);
             completedExercisesRef.current.clear();
 
@@ -113,7 +207,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
     };
 
     initializeWorkout();
-  }, [user]);
+  }, [user, selectedDate, program?.id]);
 
   const loadPreviousSetsForExercises = async (exerciseNames: string[], currentSessionId: string) => {
     if (!workoutSessionService) return;
@@ -262,7 +356,7 @@ export const TrainScreen: React.FC<TrainScreenProps> = ({
       const confirmExit = window.confirm('You have an active workout. Are you sure you want to leave?');
       if (!confirmExit) return;
     }
-    setProgram(null);
+    setActiveScreen('home');
   };
 
   const workout = currentWorkout || getTodaysWorkout();
